@@ -1,19 +1,25 @@
 import React, { useState } from 'react';
-import { Transaction, Category } from '../types/Transaction';
-import { Trash2, Filter, Calendar } from 'lucide-react';
+import { Category } from '../types/Transaction';
+import { useTransactions } from '../hooks/useTransactions';
+import { Trash2, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface TransactionListProps {
-  transactions: Transaction[];
   categories: Category[];
-  onDeleteTransaction: (id: string) => void;
 }
 
-export const TransactionList: React.FC<TransactionListProps> = ({
-  transactions,
-  categories,
-  onDeleteTransaction
-}) => {
+/**
+ * TransactionList Component - Transaction History Table
+ * 
+ * ✨ REFACTORED in Phase 2.1:
+ * - Removed transactions prop (was prop drilling from App.tsx)
+ * - Removed onDeleteTransaction prop (was callback drilling)
+ * - Uses useTransactions() hook for data and operations
+ * - Delete operation now handled internally via hook
+ */
+export const TransactionList: React.FC<TransactionListProps> = ({ categories }) => {
+  const { transactions, remove: deleteTransaction } = useTransactions();
+  
   const [filter, setFilter] = useState<'all' | 'income' | 'expense'>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [dateFilter, setDateFilter] = useState<string>('');
@@ -27,6 +33,14 @@ export const TransactionList: React.FC<TransactionListProps> = ({
   const getCategoryColor = (categoryName: string) => {
     const category = categories.find(cat => cat.name === categoryName);
     return category?.color || '#6B7280';
+  };
+
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteTransaction(id);
+    } catch (error) {
+      // Error already handled by hook (notification shown)
+    }
   };
 
   return (
@@ -119,7 +133,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({
                       {transaction.type === 'income' ? '+' : '-'}€{transaction.amount.toFixed(2)}
                     </span>
                     <button
-                      onClick={() => onDeleteTransaction(transaction.id)}
+                      onClick={() => handleDelete(transaction.id)}
                       className="p-1 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded transition-colors"
                     >
                       <Trash2 className="h-4 w-4" />
