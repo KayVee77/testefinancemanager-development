@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Transaction, Category } from './types/Transaction';
-import { User, AuthState } from './types/User';
+import { AuthState } from './types/User';
 import { getStoredTransactions, saveTransactions, getStoredCategories, saveCategories } from './utils/storage';
 import { getCurrentUser, setCurrentUser, logout, authenticateUser, saveUser, emailExists, LoginCredentials, RegisterData } from './utils/auth';
 import { Dashboard } from './components/Dashboard';
@@ -8,6 +8,10 @@ import { TransactionForm } from './components/TransactionForm';
 import { TransactionList } from './components/TransactionList';
 import { Charts } from './components/Charts';
 import { AuthForm } from './components/AuthForm';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { Toaster } from './services/notificationService';
+import { notificationService } from './services/notificationService';
+import { showStorageWarning } from './utils/storageQuota';
 import { Plus, PieChart, List, BarChart3, Wallet, LogOut, User as UserIcon } from 'lucide-react';
 
 function App() {
@@ -40,39 +44,68 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (authState.user) {
-      setTransactions(getStoredTransactions(authState.user.id));
-      setCategories(getStoredCategories(authState.user.id));
-    }
+    const loadUserData = async () => {
+      if (authState.user) {
+        try {
+          const [loadedTransactions, loadedCategories] = await Promise.all([
+            getStoredTransactions(authState.user.id),
+            getStoredCategories(authState.user.id)
+          ]);
+          setTransactions(loadedTransactions);
+          setCategories(loadedCategories);
+          
+          // Check storage quota and show warning if needed
+          showStorageWarning();
+        } catch (error) {
+          notificationService.error('Nepavyko užkrauti duomenų');
+        }
+      }
+    };
+    
+    loadUserData();
   }, [authState.user]);
 
   const handleLogin = async (credentials: LoginCredentials): Promise<boolean> => {
-    const user = authenticateUser(credentials);
-    if (user) {
+    try {
+      const user = await authenticateUser(credentials);
+      if (user) {
+        setCurrentUser(user);
+        setAuthState({
+          user,
+          isAuthenticated: true,
+          isLoading: false
+        });
+        notificationService.success('Sėkmingai prisijungėte');
+        return true;
+      }
+      notificationService.error('Neteisingas el. paštas arba slaptažodis');
+      return false;
+    } catch (error) {
+      notificationService.error('Prisijungimo klaida');
+      return false;
+    }
+  };
+
+  const handleRegister = async (data: RegisterData): Promise<boolean> => {
+    try {
+      if (emailExists(data.email)) {
+        notificationService.error('El. paštas jau naudojamas');
+        return false;
+      }
+
+      const user = await saveUser(data);
       setCurrentUser(user);
       setAuthState({
         user,
         isAuthenticated: true,
         isLoading: false
       });
+      notificationService.success('Paskyra sėkmingai sukurta');
       return true;
-    }
-    return false;
-  };
-
-  const handleRegister = async (data: RegisterData): Promise<boolean> => {
-    if (emailExists(data.email)) {
+    } catch (error) {
+      notificationService.error('Nepavyko sukurti paskyros');
       return false;
     }
-
-    const user = saveUser(data);
-    setCurrentUser(user);
-    setAuthState({
-      user,
-      isAuthenticated: true,
-      isLoading: false
-    });
-    return true;
   };
 
   const handleLogout = () => {
@@ -87,39 +120,60 @@ function App() {
     setActiveTab('dashboard');
   };
 
-  const addTransaction = (transactionData: Omit<Transaction, 'id' | 'createdAt'>) => {
+  const addTransaction = async (transactionData: Omit<Transaction, 'id' | 'createdAt'>) => {
     if (!authState.user) return;
 
-    const newTransaction: Transaction = {
-      ...transactionData,
-      id: Date.now().toString(),
-      createdAt: new Date()
-    };
+    try {
+      const newTransaction: Transaction = {
+        ...transactionData,
+        id: Date.now().toString(),
+        createdAt: new Date()
+      };
 
-    const updatedTransactions = [...transactions, newTransaction];
-    setTransactions(updatedTransactions);
-    saveTransactions(authState.user.id, updatedTransactions);
+      const updatedTransactions = [...transactions, newTransaction];
+      setTransactions(updatedTransactions);
+      await saveTransactions(authState.user.id, updatedTransactions);
+      notificationService.success('Transakcija pridėta');
+    } catch (error) {
+      notificationService.error('Nepavyko pridėti transakcijos');
+      // Revert on error
+      setTransactions(transactions);
+    }
   };
 
-  const deleteTransaction = (id: string) => {
+  const deleteTransaction = async (id: string) => {
     if (!authState.user) return;
 
-    const updatedTransactions = transactions.filter(t => t.id !== id);
-    setTransactions(updatedTransactions);
-    saveTransactions(authState.user.id, updatedTransactions);
+    try {
+      const updatedTransactions = transactions.filter(t => t.id !== id);
+      setTransactions(updatedTransactions);
+      await saveTransactions(authState.user.id, updatedTransactions);
+      notificationService.success('Transakcija ištrinta');
+    } catch (error) {
+      notificationService.error('Nepavyko ištrinti transakcijos');
+      // Revert on error
+      setTransactions(transactions);
+    }
   };
 
-  const addCategory = (categoryData: Omit<Category, 'id'>) => {
+  const addCategory = async (categoryData: Omit<Category, 'id'>) => {
     if (!authState.user) return;
 
-    const newCategory: Category = {
-      ...categoryData,
-      id: Date.now().toString()
-    };
+    try {
+      const newCategory: Category = {
+        ...categoryData,
+        id: Date.now().toString()
+      };
 
-    const updatedCategories = [...categories, newCategory];
-    setCategories(updatedCategories);
-    saveCategories(authState.user.id, updatedCategories);
+      const updatedCategories = [...categories, newCategory];
+      setCategories(updatedCategories);
+      await saveCategories(authState.user.id, updatedCategories);
+      notificationService.success('Kategorija pridėta');
+    } catch (error) {
+      notificationService.error('Nepavyko pridėti kategorijos');
+      // Revert on error
+      setCategories(categories);
+    }
   };
 
   const renderContent = () => {
@@ -157,7 +211,9 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <ErrorBoundary componentName="App">
+      <Toaster />
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
@@ -245,7 +301,8 @@ function App() {
           onAddCategory={addCategory}
         />
       </div>
-    </div>
+      </div>
+    </ErrorBoundary>
   );
 }
 

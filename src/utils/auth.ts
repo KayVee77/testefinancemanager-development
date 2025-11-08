@@ -84,7 +84,8 @@ export const getStoredUsers = (): StoredUser[] => {
     const stored = localStorage.getItem(USERS_KEY);
     return stored ? JSON.parse(stored) : [];
   } catch (error) {
-    console.error('Error loading users:', error);
+    const storageError = new StorageError('Nepavyko užkrauti vartotojų duomenų', error);
+    logger.log(storageError);
     return [];
   }
 };
@@ -157,8 +158,64 @@ export const authenticateUser = (credentials: LoginCredentials): User | null => 
       return authenticatedUser;
     }
   }
+};
 
-  return null;
+export const authenticateUser = async (credentials: LoginCredentials): Promise<User | null> => {
+  try {
+    const users = getStoredUsers();
+    const user = users.find(u => u.email === credentials.email);
+
+    if (!user) {
+      const authError = new AuthError('Neteisingas el. paštas arba slaptažodis');
+      await logger.log(authError);
+      return null;
+    }
+
+    // Check if user has new secure hash with salt
+    if (user.salt) {
+      const isValid = verifyPassword(credentials.password, user.passwordHash, user.salt);
+      if (isValid) {
+        const authenticatedUser: User = {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          createdAt: new Date(user.createdAt),
+          lastLogin: new Date()
+        };
+        return authenticatedUser;
+      }
+    } else {
+      // Legacy support: user has old simple hash
+      // Check with old hash method
+      if (user.passwordHash === simpleHash(credentials.password)) {
+        // Migrate to new secure hash
+        const salt = generateSalt();
+        user.salt = salt;
+        user.passwordHash = hashPassword(credentials.password, salt);
+        
+        // Update storage with new hash
+        const allUsers = users.map(u => u.id === user.id ? user : u);
+        localStorage.setItem(USERS_KEY, JSON.stringify(allUsers));
+        
+        const authenticatedUser: User = {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          createdAt: new Date(user.createdAt),
+          lastLogin: new Date()
+        };
+        return authenticatedUser;
+      }
+    }
+
+    const authError = new AuthError('Neteisingas el. paštas arba slaptažodis');
+    await logger.log(authError);
+    return null;
+  } catch (error) {
+    const authError = new AuthError('Autentifikacijos klaida', error);
+    await logger.log(authError);
+    return null;
+  }
 };
 
 export const getCurrentUser = (): User | null => {
@@ -173,7 +230,8 @@ export const getCurrentUser = (): User | null => {
       lastLogin: new Date(userData.lastLogin)
     };
   } catch (error) {
-    console.error('Error loading current user:', error);
+    const storageError = new StorageError('Nepavyko užkrauti dabartinio vartotojo', error);
+    logger.log(storageError);
     return null;
   }
 };
@@ -182,7 +240,9 @@ export const setCurrentUser = (user: User): void => {
   try {
     localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
   } catch (error) {
-    console.error('Error saving current user:', error);
+    const storageError = new StorageError('Nepavyko išsaugoti sesijos', error);
+    logger.log(storageError);
+    throw storageError;
   }
 };
 
