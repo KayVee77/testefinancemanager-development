@@ -23,3 +23,17 @@ dist-ssr
 *.sln
 *.sw?
 .env
+CODE_REVIEW_REPORT.md
+GETTING_STARTED.md
+IMPLEMENTATION_CHECKLIST.md
+.github/copilot-instructions.md
+.github/prompts/phase-1.1-security-agent.prompt.md
+.github/prompts/phase-1.2-stability-agent.prompt.md
+.github/prompts/phase-2.1-state-management-agent.prompt.md
+.github/prompts/phase-3-testing-agent.prompt.md
+.github/prompts/phase-4-5-6-final-agent.prompt.md
+.github/prompts/QUICK_START.md
+.github/prompts/README.md
+PHASE_1.1_INTEGRATION_GUIDE.md
+PHASE_1.1_SUMMARY.md
+SECURITY_TESTING_REPORT.md

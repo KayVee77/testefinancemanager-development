@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Transaction, Category } from '../types/Transaction';
 import { Plus, X } from 'lucide-react';
+import { sanitizeAndTrim } from '../utils/sanitize';
 
 interface TransactionFormProps {
   categories: Category[];
@@ -33,10 +34,19 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
     
     if (!amount || !description || !category) return;
 
+    // Sanitize inputs before processing
+    const sanitizedDescription = sanitizeAndTrim(description);
+    const sanitizedCategory = sanitizeAndTrim(category);
+
+    if (!sanitizedDescription || !sanitizedCategory) {
+      // If sanitization results in empty strings, don't submit
+      return;
+    }
+
     onAddTransaction({
       amount: parseFloat(amount),
-      description,
-      category,
+      description: sanitizedDescription,
+      category: sanitizedCategory,
       type,
       date: new Date(date)
     });
@@ -50,10 +60,11 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
   };
 
   const handleAddCategory = () => {
-    if (!newCategoryName.trim()) return;
+    const sanitizedName = sanitizeAndTrim(newCategoryName);
+    if (!sanitizedName) return;
 
     onAddCategory({
-      name: newCategoryName,
+      name: sanitizedName,
       color: newCategoryColor,
       icon: 'circle',
       type
