@@ -1,5 +1,6 @@
 import { User } from '../types/User';
 import CryptoJS from 'crypto-js';
+import { AuthError, StorageError, logger } from '../errors';
 
 /**
  * DEV-ONLY AUTHENTICATION
@@ -84,81 +85,108 @@ export const getStoredUsers = (): StoredUser[] => {
     const stored = localStorage.getItem(USERS_KEY);
     return stored ? JSON.parse(stored) : [];
   } catch (error) {
-    console.error('Error loading users:', error);
+    const storageError = new StorageError('Nepavyko užkrauti vartotojų duomenų', error);
+    logger.log(storageError);
     return [];
   }
 };
 
-export const saveUser = (userData: RegisterData): User => {
-  const users = getStoredUsers();
-  const salt = generateSalt();
-  const newUser: StoredUser = {
-    id: Date.now().toString(),
-    email: userData.email,
-    name: userData.name,
-    passwordHash: hashPassword(userData.password, salt),
-    salt: salt,
-    createdAt: new Date().toISOString()
-  };
+export const saveUser = async (userData: RegisterData): Promise<User> => {
+  try {
+    const users = getStoredUsers();
+    const salt = generateSalt();
+    const newUser: StoredUser = {
+      id: Date.now().toString(),
+      email: userData.email,
+      name: userData.name,
+      passwordHash: hashPassword(userData.password, salt),
+      salt: salt,
+      createdAt: new Date().toISOString()
+    };
 
-  users.push(newUser);
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
+    users.push(newUser);
+    localStorage.setItem(USERS_KEY, JSON.stringify(users));
 
-  const user: User = {
-    id: newUser.id,
-    email: newUser.email,
-    name: newUser.name,
-    createdAt: new Date(newUser.createdAt),
-    lastLogin: new Date()
-  };
+    const user: User = {
+      id: newUser.id,
+      email: newUser.email,
+      name: newUser.name,
+      createdAt: new Date(newUser.createdAt),
+      lastLogin: new Date()
+    };
 
-  return user;
+    return user;
+  } catch (error) {
+    // Check for quota exceeded error
+    if (error instanceof DOMException && error.code === 22) {
+      const storageError = new StorageError('Saugykla pilna. Nepavyko sukurti paskyros.');
+      await logger.log(storageError);
+      throw storageError;
+    }
+    
+    // Generic storage error
+    const storageError = new StorageError('Nepavyko išsaugoti vartotojo duomenų', error);
+    await logger.log(storageError);
+    throw storageError;
+  }
 };
 
-export const authenticateUser = (credentials: LoginCredentials): User | null => {
-  const users = getStoredUsers();
-  const user = users.find(u => u.email === credentials.email);
+export const authenticateUser = async (credentials: LoginCredentials): Promise<User | null> => {
+  try {
+    const users = getStoredUsers();
+    const user = users.find(u => u.email === credentials.email);
 
-  if (!user) return null;
+    if (!user) {
+      const authError = new AuthError('Neteisingas el. paštas arba slaptažodis');
+      await logger.log(authError);
+      return null;
+    }
 
-  // Check if user has new secure hash with salt
-  if (user.salt) {
-    const isValid = verifyPassword(credentials.password, user.passwordHash, user.salt);
-    if (isValid) {
-      const authenticatedUser: User = {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        createdAt: new Date(user.createdAt),
-        lastLogin: new Date()
-      };
-      return authenticatedUser;
+    // Check if user has new secure hash with salt
+    if (user.salt) {
+      const isValid = verifyPassword(credentials.password, user.passwordHash, user.salt);
+      if (isValid) {
+        const authenticatedUser: User = {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          createdAt: new Date(user.createdAt),
+          lastLogin: new Date()
+        };
+        return authenticatedUser;
+      }
+    } else {
+      // Legacy support: user has old simple hash
+      // Check with old hash method
+      if (user.passwordHash === simpleHash(credentials.password)) {
+        // Migrate to new secure hash
+        const salt = generateSalt();
+        user.salt = salt;
+        user.passwordHash = hashPassword(credentials.password, salt);
+        
+        // Update storage with new hash
+        const allUsers = users.map(u => u.id === user.id ? user : u);
+        localStorage.setItem(USERS_KEY, JSON.stringify(allUsers));
+        
+        const authenticatedUser: User = {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          createdAt: new Date(user.createdAt),
+          lastLogin: new Date()
+        };
+        return authenticatedUser;
+      }
     }
-  } else {
-    // Legacy support: user has old simple hash
-    // Check with old hash method
-    if (user.passwordHash === simpleHash(credentials.password)) {
-      // Migrate to new secure hash
-      const salt = generateSalt();
-      user.salt = salt;
-      user.passwordHash = hashPassword(credentials.password, salt);
-      
-      // Update storage with new hash
-      const allUsers = users.map(u => u.id === user.id ? user : u);
-      localStorage.setItem(USERS_KEY, JSON.stringify(allUsers));
-      
-      const authenticatedUser: User = {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        createdAt: new Date(user.createdAt),
-        lastLogin: new Date()
-      };
-      return authenticatedUser;
-    }
+
+    const authError = new AuthError('Neteisingas el. paštas arba slaptažodis');
+    await logger.log(authError);
+    return null;
+  } catch (error) {
+    const authError = new AuthError('Autentifikacijos klaida', error);
+    await logger.log(authError);
+    return null;
   }
-
-  return null;
 };
 
 export const getCurrentUser = (): User | null => {
@@ -173,7 +201,8 @@ export const getCurrentUser = (): User | null => {
       lastLogin: new Date(userData.lastLogin)
     };
   } catch (error) {
-    console.error('Error loading current user:', error);
+    const storageError = new StorageError('Nepavyko užkrauti dabartinio vartotojo', error);
+    logger.log(storageError);
     return null;
   }
 };
@@ -182,7 +211,9 @@ export const setCurrentUser = (user: User): void => {
   try {
     localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
   } catch (error) {
-    console.error('Error saving current user:', error);
+    const storageError = new StorageError('Nepavyko išsaugoti sesijos', error);
+    logger.log(storageError);
+    throw storageError;
   }
 };
 
