@@ -1,5 +1,8 @@
 import { Transaction, Category } from '../types/Transaction';
-import { encryptData, decryptData, isEncrypted } from './encryption';
+
+// Note: Client-side encryption removed for AWS deployment readiness
+// In production, data will be encrypted at rest by DynamoDB (AWS KMS)
+// and in transit via HTTPS (API Gateway)
 
 const getStorageKey = (userId: string, key: string): string => {
   return `finance_${userId}_${key}`;
@@ -10,26 +13,7 @@ export const getStoredTransactions = (userId: string): Transaction[] => {
     const stored = localStorage.getItem(getStorageKey(userId, 'transactions'));
     if (!stored) return [];
     
-    // Check if data is encrypted and decrypt if needed
-    let transactions;
-    if (isEncrypted(stored)) {
-      transactions = decryptData(stored);
-      if (!transactions) {
-        // Decryption failed, return empty array
-        console.error('Failed to decrypt transactions');
-        return [];
-      }
-    } else {
-      // Legacy unencrypted data - parse and migrate
-      transactions = JSON.parse(stored);
-      // Re-save as encrypted
-      saveTransactions(userId, transactions.map((t: any) => ({
-        ...t,
-        date: new Date(t.date),
-        createdAt: new Date(t.createdAt)
-      })));
-    }
-    
+    const transactions = JSON.parse(stored);
     return transactions.map((t: any) => ({
       ...t,
       date: new Date(t.date),
@@ -43,8 +27,7 @@ export const getStoredTransactions = (userId: string): Transaction[] => {
 
 export const saveTransactions = (userId: string, transactions: Transaction[]): void => {
   try {
-    const encrypted = encryptData(transactions);
-    localStorage.setItem(getStorageKey(userId, 'transactions'), encrypted);
+    localStorage.setItem(getStorageKey(userId, 'transactions'), JSON.stringify(transactions));
   } catch (error) {
     console.error('Error saving transactions:', error);
   }
@@ -55,23 +38,7 @@ export const getStoredCategories = (userId: string): Category[] => {
     const stored = localStorage.getItem(getStorageKey(userId, 'categories'));
     if (!stored) return getDefaultCategories();
     
-    // Check if data is encrypted and decrypt if needed
-    let categories;
-    if (isEncrypted(stored)) {
-      categories = decryptData(stored);
-      if (!categories) {
-        // Decryption failed, return defaults
-        console.error('Failed to decrypt categories');
-        return getDefaultCategories();
-      }
-    } else {
-      // Legacy unencrypted data - parse and migrate
-      categories = JSON.parse(stored);
-      // Re-save as encrypted
-      saveCategories(userId, categories);
-    }
-    
-    return categories;
+    return JSON.parse(stored);
   } catch (error) {
     console.error('Error loading categories:', error);
     return getDefaultCategories();
@@ -80,8 +47,7 @@ export const getStoredCategories = (userId: string): Category[] => {
 
 export const saveCategories = (userId: string, categories: Category[]): void => {
   try {
-    const encrypted = encryptData(categories);
-    localStorage.setItem(getStorageKey(userId, 'categories'), encrypted);
+    localStorage.setItem(getStorageKey(userId, 'categories'), JSON.stringify(categories));
   } catch (error) {
     console.error('Error saving categories:', error);
   }

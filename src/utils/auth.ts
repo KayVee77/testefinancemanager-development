@@ -1,6 +1,31 @@
 import { User } from '../types/User';
 import CryptoJS from 'crypto-js';
 
+/**
+ * DEV-ONLY AUTHENTICATION
+ * 
+ * This auth system is for local development only.
+ * In production AWS deployment, this will be replaced with AWS Cognito.
+ * 
+ * To use dev auth, set environment variable:
+ * VITE_DEV_ONLY_AUTH=true
+ * 
+ * When false or unset, this module will throw an error, forcing AWS Cognito integration.
+ */
+
+// Check if dev auth is explicitly enabled
+const DEV_AUTH_ENABLED = import.meta.env.VITE_DEV_ONLY_AUTH === 'true';
+
+if (!DEV_AUTH_ENABLED && import.meta.env.PROD) {
+  throw new Error(
+    'DEV authentication is disabled. ' +
+    'For local development, set VITE_DEV_ONLY_AUTH=true. ' +
+    'For production, integrate AWS Cognito.'
+  );
+}
+
+console.info('[AUTH] Using dev authentication (local only)');
+
 const USERS_KEY = 'finance_users';
 const CURRENT_USER_KEY = 'finance_current_user';
 
