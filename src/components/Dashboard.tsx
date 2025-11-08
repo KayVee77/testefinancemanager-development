@@ -1,13 +1,19 @@
 import React from 'react';
-import { Transaction } from '../types/Transaction';
+import { useTransactions } from '../hooks/useTransactions';
 import { getTotalIncome, getTotalExpenses, getBalance } from '../utils/calculations';
 import { TrendingUp, TrendingDown, DollarSign, Wallet } from 'lucide-react';
 
-interface DashboardProps {
-  transactions: Transaction[];
-}
+/**
+ * Dashboard Component - Financial Overview Cards
+ * 
+ * ✨ REFACTORED in Phase 2.1:
+ * - Removed transactions prop (was prop drilling from App.tsx)
+ * - Uses useTransactions() hook to access Zustand store directly
+ * - No props needed - self-contained component
+ */
+export const Dashboard: React.FC = () => {
+  const { transactions } = useTransactions();
 
-export const Dashboard: React.FC<DashboardProps> = ({ transactions }) => {
   const totalIncome = getTotalIncome(transactions);
   const totalExpenses = getTotalExpenses(transactions);
   const balance = getBalance(transactions);

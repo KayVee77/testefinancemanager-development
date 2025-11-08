@@ -6,14 +6,27 @@
  * - See: https://vitejs.dev/guide/env-and-mode.html
  * 
  * Environment Modes:
- * - LOCAL TEST: VITE_DEV_ONLY_AUTH=true (localStorage, no AWS)
- * - PROD AWS: VITE_DEV_ONLY_AUTH=false (Cognito, API Gateway, DynamoDB)
+ * - LOCAL TEST: VITE_RUNTIME=local (localStorage, no AWS)
+ * - PROD AWS: VITE_RUNTIME=aws (Cognito, API Gateway, DynamoDB)
+ * 
+ * Migration Note: Replaced VITE_DEV_ONLY_AUTH with VITE_RUNTIME for better semantics
  */
 
 /**
- * Current runtime environment
+ * Runtime environment type
  */
-export const IS_AWS_MODE = import.meta.env.VITE_DEV_ONLY_AUTH === 'false';
+type RuntimeEnvironment = 'local' | 'aws';
+
+/**
+ * Get current runtime environment (with fallback)
+ */
+export const RUNTIME: RuntimeEnvironment = 
+  (import.meta.env.VITE_RUNTIME as RuntimeEnvironment) || 'local';
+
+/**
+ * Current runtime environment check
+ */
+export const IS_AWS_MODE = RUNTIME === 'aws';
 
 /**
  * Development mode check (Vite idiom)
@@ -39,7 +52,7 @@ export const COGNITO_CLIENT_ID = import.meta.env.VITE_AWS_COGNITO_CLIENT_ID || '
 /**
  * Environment display name
  */
-export const ENVIRONMENT = IS_AWS_MODE ? 'production' : 'local';
+export const ENVIRONMENT = RUNTIME;
 
 /**
  * Helper to get full API URL
@@ -48,7 +61,9 @@ export const getApiUrl = (path: string): string => {
   if (!IS_AWS_MODE) {
     throw new Error('API calls only available in AWS mode');
   }
-  return `${API_BASE_URL}${path}`;
+  // Remove /api prefix if path starts with it (API_BASE_URL already includes it)
+  const cleanPath = path.startsWith('/api') ? path.substring(4) : path;
+  return `${API_BASE_URL}${cleanPath}`;
 };
 
 /**

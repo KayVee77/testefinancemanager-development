@@ -3,14 +3,20 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   PieChart, Pie, Cell, BarChart, Bar, ResponsiveContainer
 } from 'recharts';
-import { Transaction } from '../types/Transaction';
+import { useTransactions } from '../hooks/useTransactions';
 import { calculateMonthlyData, calculateCategorySummary } from '../utils/calculations';
 
-interface ChartsProps {
-  transactions: Transaction[];
-}
+/**
+ * Charts Component - Financial Data Visualizations
+ * 
+ * ✨ REFACTORED in Phase 2.1:
+ * - Removed transactions prop (was prop drilling from App.tsx)
+ * - Uses useTransactions() hook to access Zustand store directly
+ * - No props needed - self-contained component
+ */
+export const Charts: React.FC = () => {
+  const { transactions } = useTransactions();
 
-export const Charts: React.FC<ChartsProps> = ({ transactions }) => {
   const monthlyData = calculateMonthlyData(transactions);
   const expenseCategories = calculateCategorySummary(transactions, 'expense');
   const incomeCategories = calculateCategorySummary(transactions, 'income');
