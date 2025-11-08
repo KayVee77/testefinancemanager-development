@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { User, Mail, Lock, Eye, EyeOff, LogIn, UserPlus } from 'lucide-react';
 import { LoginCredentials, RegisterData, validateEmail, validatePassword } from '../utils/auth';
+import { sanitizeAndTrim } from '../utils/sanitize';
 
 interface AuthFormProps {
   onLogin: (credentials: LoginCredentials) => Promise<boolean>;
@@ -24,8 +25,12 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onLogin, onRegister }) => {
     setError('');
     setIsLoading(true);
 
+    // Sanitize inputs
+    const sanitizedEmail = sanitizeAndTrim(formData.email);
+    const sanitizedName = sanitizeAndTrim(formData.name);
+
     // Validation
-    if (!validateEmail(formData.email)) {
+    if (!validateEmail(sanitizedEmail)) {
       setError('Neteisingas el. pašto formatas');
       setIsLoading(false);
       return;
@@ -37,7 +42,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onLogin, onRegister }) => {
       return;
     }
 
-    if (!isLogin && !formData.name.trim()) {
+    if (!isLogin && !sanitizedName) {
       setError('Vardas yra privalomas');
       setIsLoading(false);
       return;
@@ -48,7 +53,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onLogin, onRegister }) => {
       
       if (isLogin) {
         success = await onLogin({
-          email: formData.email,
+          email: sanitizedEmail,
           password: formData.password
         });
         if (!success) {
@@ -56,8 +61,8 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onLogin, onRegister }) => {
         }
       } else {
         success = await onRegister({
-          name: formData.name,
-          email: formData.email,
+          name: sanitizedName,
+          email: sanitizedEmail,
           password: formData.password
         });
         if (!success) {

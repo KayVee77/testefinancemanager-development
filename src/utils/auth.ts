@@ -1,4 +1,5 @@
 import { User } from '../types/User';
+import CryptoJS from 'crypto-js';
 
 const USERS_KEY = 'finance_users';
 const CURRENT_USER_KEY = 'finance_current_user';
@@ -14,18 +15,46 @@ export interface RegisterData {
   password: string;
 }
 
-// Simple hash function for password storage (for demo purposes)
+// Generate a random salt for password hashing
+const generateSalt = (): string => {
+  return CryptoJS.lib.WordArray.random(128/8).toString();
+};
+
+// Secure password hashing using PBKDF2
+const hashPassword = (password: string, salt: string): string => {
+  return CryptoJS.PBKDF2(password, salt, {
+    keySize: 256/32,
+    iterations: 10000
+  }).toString();
+};
+
+// Verify password against stored hash
+const verifyPassword = (password: string, hash: string, salt: string): boolean => {
+  const testHash = hashPassword(password, salt);
+  return testHash === hash;
+};
+
+// Legacy simple hash function - for migration only
 const simpleHash = (str: string): string => {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i);
     hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32bit integer
+    hash = hash & hash;
   }
   return Math.abs(hash).toString(16);
 };
 
-export const getStoredUsers = (): Array<{ id: string; email: string; name: string; passwordHash: string; createdAt: string }> => {
+interface StoredUser {
+  id: string;
+  email: string;
+  name: string;
+  passwordHash: string;
+  salt?: string; // Optional for backward compatibility
+  createdAt: string;
+}
+
+export const getStoredUsers = (): StoredUser[] => {
   try {
     const stored = localStorage.getItem(USERS_KEY);
     return stored ? JSON.parse(stored) : [];
@@ -37,11 +66,13 @@ export const getStoredUsers = (): Array<{ id: string; email: string; name: strin
 
 export const saveUser = (userData: RegisterData): User => {
   const users = getStoredUsers();
-  const newUser = {
+  const salt = generateSalt();
+  const newUser: StoredUser = {
     id: Date.now().toString(),
     email: userData.email,
     name: userData.name,
-    passwordHash: simpleHash(userData.password),
+    passwordHash: hashPassword(userData.password, salt),
+    salt: salt,
     createdAt: new Date().toISOString()
   };
 
@@ -61,20 +92,45 @@ export const saveUser = (userData: RegisterData): User => {
 
 export const authenticateUser = (credentials: LoginCredentials): User | null => {
   const users = getStoredUsers();
-  const user = users.find(u => 
-    u.email === credentials.email && 
-    u.passwordHash === simpleHash(credentials.password)
-  );
+  const user = users.find(u => u.email === credentials.email);
 
-  if (user) {
-    const authenticatedUser: User = {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      createdAt: new Date(user.createdAt),
-      lastLogin: new Date()
-    };
-    return authenticatedUser;
+  if (!user) return null;
+
+  // Check if user has new secure hash with salt
+  if (user.salt) {
+    const isValid = verifyPassword(credentials.password, user.passwordHash, user.salt);
+    if (isValid) {
+      const authenticatedUser: User = {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        createdAt: new Date(user.createdAt),
+        lastLogin: new Date()
+      };
+      return authenticatedUser;
+    }
+  } else {
+    // Legacy support: user has old simple hash
+    // Check with old hash method
+    if (user.passwordHash === simpleHash(credentials.password)) {
+      // Migrate to new secure hash
+      const salt = generateSalt();
+      user.salt = salt;
+      user.passwordHash = hashPassword(credentials.password, salt);
+      
+      // Update storage with new hash
+      const allUsers = users.map(u => u.id === user.id ? user : u);
+      localStorage.setItem(USERS_KEY, JSON.stringify(allUsers));
+      
+      const authenticatedUser: User = {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        createdAt: new Date(user.createdAt),
+        lastLogin: new Date()
+      };
+      return authenticatedUser;
+    }
   }
 
   return null;
