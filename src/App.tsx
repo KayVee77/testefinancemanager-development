@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Transaction, Category } from './types/Transaction';
-import { AuthState } from './types/User';
-import { getStoredTransactions, saveTransactions, getStoredCategories, saveCategories } from './utils/storage';
-import { getCurrentUser, setCurrentUser, logout, authenticateUser, saveUser, emailExists, LoginCredentials, RegisterData } from './utils/auth';
+import { Category } from './types/Transaction';
+import { getStoredCategories, saveCategories } from './utils/storage';
 import { Dashboard } from './components/Dashboard';
 import { TransactionForm } from './components/TransactionForm';
 import { TransactionList } from './components/TransactionList';
@@ -12,6 +10,8 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { Toaster } from './services/notificationService';
 import { notificationService } from './services/notificationService';
 import { showStorageWarning } from './utils/storageQuota';
+import { useAuth } from './hooks/useAuth';
+import { useTransactions } from './hooks/useTransactions';
 import { Plus, PieChart, List, BarChart3, Wallet, LogOut, User as UserIcon } from 'lucide-react';
 
 /**
@@ -30,10 +30,10 @@ import { Plus, PieChart, List, BarChart3, Wallet, LogOut, User as UserIcon } fro
  * - Layout and routing
  */
 function App() {
-  // Auth state from Zustand store (replaces authState useState)
+  // Auth state from Zustand store
   const { user, isAuthenticated, isLoading, login, register, logout: authLogout, initialize } = useAuth();
   
-  // Transaction state from Zustand store (replaces transactions useState)
+  // Transaction state from Zustand store (transactions are auto-loaded by the hook)
   const { add: addTransaction } = useTransactions();
   
   // Local UI state (not shared across components)
@@ -48,114 +48,55 @@ function App() {
 
   // Load categories when user logs in
   useEffect(() => {
-    const loadUserData = async () => {
-      if (authState.user) {
+    const loadCategories = async () => {
+      if (user) {
         try {
-          const [loadedTransactions, loadedCategories] = await Promise.all([
-            getStoredTransactions(authState.user.id),
-            getStoredCategories(authState.user.id)
-          ]);
-          setTransactions(loadedTransactions);
+          const loadedCategories = await getStoredCategories(user.id);
           setCategories(loadedCategories);
           
           // Check storage quota and show warning if needed
           showStorageWarning();
         } catch (error) {
-          notificationService.error('Nepavyko užkrauti duomenų');
+          notificationService.error('Nepavyko užkrauti kategorijų');
         }
       }
     };
     
-    loadUserData();
-  }, [authState.user]);
+    loadCategories();
+  }, [user?.id]);
 
-  const handleLogin = async (credentials: LoginCredentials): Promise<boolean> => {
+  // Handle login
+  const handleLogin = async (credentials: { email: string; password: string }): Promise<boolean> => {
     try {
-      const user = await authenticateUser(credentials);
-      if (user) {
-        setCurrentUser(user);
-        setAuthState({
-          user,
-          isAuthenticated: true,
-          isLoading: false
-        });
-        notificationService.success('Sėkmingai prisijungėte');
-        return true;
-      }
-      notificationService.error('Neteisingas el. paštas arba slaptažodis');
-      return false;
-    } catch (error) {
-      notificationService.error('Prisijungimo klaida');
-      return false;
-    }
-  };
-
-  const handleRegister = async (data: RegisterData): Promise<boolean> => {
-    try {
-      if (emailExists(data.email)) {
-        notificationService.error('El. paštas jau naudojamas');
-        return false;
-      }
-
-      const user = await saveUser(data);
-      setCurrentUser(user);
-      setAuthState({
-        user,
-        isAuthenticated: true,
-        isLoading: false
-      });
-      notificationService.success('Paskyra sėkmingai sukurta');
+      await login(credentials);
       return true;
     } catch (error) {
-      notificationService.error('Nepavyko sukurti paskyros');
+      // Error notification already shown by authService
       return false;
     }
   };
 
-  const handleLogout = () => {
-    authLogout();
+  // Handle registration
+  const handleRegister = async (data: { name: string; email: string; password: string }): Promise<boolean> => {
+    try {
+      await register(data);
+      return true;
+    } catch (error) {
+      // Error notification already shown by authService
+      return false;
+    }
+  };
+
+  // Handle logout
+  const handleLogout = async () => {
+    await authLogout();
     setCategories([]);
     setActiveTab('dashboard');
   };
 
-  const addTransaction = async (transactionData: Omit<Transaction, 'id' | 'createdAt'>) => {
-    if (!authState.user) return;
-
-    try {
-      const newTransaction: Transaction = {
-        ...transactionData,
-        id: Date.now().toString(),
-        createdAt: new Date()
-      };
-
-      const updatedTransactions = [...transactions, newTransaction];
-      setTransactions(updatedTransactions);
-      await saveTransactions(authState.user.id, updatedTransactions);
-      notificationService.success('Transakcija pridėta');
-    } catch (error) {
-      notificationService.error('Nepavyko pridėti transakcijos');
-      // Revert on error
-      setTransactions(transactions);
-    }
-  };
-
-  const deleteTransaction = async (id: string) => {
-    if (!authState.user) return;
-
-    try {
-      const updatedTransactions = transactions.filter(t => t.id !== id);
-      setTransactions(updatedTransactions);
-      await saveTransactions(authState.user.id, updatedTransactions);
-      notificationService.success('Transakcija ištrinta');
-    } catch (error) {
-      notificationService.error('Nepavyko ištrinti transakcijos');
-      // Revert on error
-      setTransactions(transactions);
-    }
-  };
-
+  // Handle adding new category
   const addCategory = async (categoryData: Omit<Category, 'id'>) => {
-    if (!authState.user) return;
+    if (!user) return;
 
     try {
       const newCategory: Category = {
@@ -165,7 +106,7 @@ function App() {
 
       const updatedCategories = [...categories, newCategory];
       setCategories(updatedCategories);
-      await saveCategories(authState.user.id, updatedCategories);
+      await saveCategories(user.id, updatedCategories);
       notificationService.success('Kategorija pridėta');
     } catch (error) {
       notificationService.error('Nepavyko pridėti kategorijos');

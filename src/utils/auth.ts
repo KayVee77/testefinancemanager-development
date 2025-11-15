@@ -1,5 +1,6 @@
 import { User } from '../types/User';
 import CryptoJS from 'crypto-js';
+import { AuthError, StorageError } from '../errors/ApplicationError';
 
 /**
  * DEV-ONLY AUTHENTICATION
@@ -85,7 +86,7 @@ export const getStoredUsers = (): StoredUser[] => {
     return stored ? JSON.parse(stored) : [];
   } catch (error) {
     const storageError = new StorageError('Nepavyko užkrauti vartotojų duomenų', error);
-    logger.log(storageError);
+    console.error('[STORAGE]', storageError);
     return [];
   }
 };
@@ -116,50 +117,6 @@ export const saveUser = (userData: RegisterData): User => {
   return user;
 };
 
-export const authenticateUser = (credentials: LoginCredentials): User | null => {
-  const users = getStoredUsers();
-  const user = users.find(u => u.email === credentials.email);
-
-  if (!user) return null;
-
-  // Check if user has new secure hash with salt
-  if (user.salt) {
-    const isValid = verifyPassword(credentials.password, user.passwordHash, user.salt);
-    if (isValid) {
-      const authenticatedUser: User = {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        createdAt: new Date(user.createdAt),
-        lastLogin: new Date()
-      };
-      return authenticatedUser;
-    }
-  } else {
-    // Legacy support: user has old simple hash
-    // Check with old hash method
-    if (user.passwordHash === simpleHash(credentials.password)) {
-      // Migrate to new secure hash
-      const salt = generateSalt();
-      user.salt = salt;
-      user.passwordHash = hashPassword(credentials.password, salt);
-      
-      // Update storage with new hash
-      const allUsers = users.map(u => u.id === user.id ? user : u);
-      localStorage.setItem(USERS_KEY, JSON.stringify(allUsers));
-      
-      const authenticatedUser: User = {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        createdAt: new Date(user.createdAt),
-        lastLogin: new Date()
-      };
-      return authenticatedUser;
-    }
-  }
-};
-
 export const authenticateUser = async (credentials: LoginCredentials): Promise<User | null> => {
   try {
     const users = getStoredUsers();
@@ -167,7 +124,7 @@ export const authenticateUser = async (credentials: LoginCredentials): Promise<U
 
     if (!user) {
       const authError = new AuthError('Neteisingas el. paštas arba slaptažodis');
-      await logger.log(authError);
+      console.error('[AUTH]', authError);
       return null;
     }
 
@@ -209,11 +166,11 @@ export const authenticateUser = async (credentials: LoginCredentials): Promise<U
     }
 
     const authError = new AuthError('Neteisingas el. paštas arba slaptažodis');
-    await logger.log(authError);
+    console.error('[AUTH]', authError);
     return null;
   } catch (error) {
     const authError = new AuthError('Autentifikacijos klaida', error);
-    await logger.log(authError);
+    console.error('[AUTH]', authError);
     return null;
   }
 };
@@ -231,7 +188,7 @@ export const getCurrentUser = (): User | null => {
     };
   } catch (error) {
     const storageError = new StorageError('Nepavyko užkrauti dabartinio vartotojo', error);
-    logger.log(storageError);
+    console.error('[STORAGE]', storageError);
     return null;
   }
 };
@@ -241,7 +198,7 @@ export const setCurrentUser = (user: User): void => {
     localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
   } catch (error) {
     const storageError = new StorageError('Nepavyko išsaugoti sesijos', error);
-    logger.log(storageError);
+    console.error('[STORAGE]', storageError);
     throw storageError;
   }
 };
