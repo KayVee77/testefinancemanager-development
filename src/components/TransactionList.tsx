@@ -5,6 +5,7 @@ import { useTranslation } from '../hooks/useTranslation';
 import { translateCategoryName } from '../i18n';
 import { Trash2, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
+import { ImportExportToolbar } from './ImportExport/ImportExportToolbar';
 
 interface TransactionListProps {
   categories: Category[];
@@ -49,9 +50,14 @@ export const TransactionList: React.FC<TransactionListProps> = ({ categories }) 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700">
       <div className="p-6 border-b border-gray-100 dark:border-gray-700">
-        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('transactions.history')}</h3>
-          
+        <div className="flex flex-col gap-4">
+          {/* Header Row: Title + Import/Export Toolbar */}
+          <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('transactions.history')}</h3>
+            <ImportExportToolbar />
+          </div>
+
+          {/* Filters Row */}
           <div className="flex flex-wrap gap-3">
             <div className="flex bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
               <button
