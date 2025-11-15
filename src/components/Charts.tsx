@@ -4,6 +4,8 @@ import {
   PieChart, Pie, Cell, BarChart, Bar, ResponsiveContainer
 } from 'recharts';
 import { useTransactions } from '../hooks/useTransactions';
+import { useTranslation } from '../hooks/useTranslation';
+import { translateCategoryName } from '../i18n';
 import { calculateMonthlyData, calculateCategorySummary } from '../utils/calculations';
 
 /**
@@ -16,10 +18,17 @@ import { calculateMonthlyData, calculateCategorySummary } from '../utils/calcula
  */
 export const Charts: React.FC = () => {
   const { transactions } = useTransactions();
+  const { t, language } = useTranslation();
 
   const monthlyData = calculateMonthlyData(transactions);
   const expenseCategories = calculateCategorySummary(transactions, 'expense');
   const incomeCategories = calculateCategorySummary(transactions, 'income');
+
+  // Translate category names for display
+  const translatedIncomeCategories = incomeCategories.map(cat => ({
+    ...cat,
+    category: translateCategoryName(cat.category, language)
+  }));
 
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
@@ -28,9 +37,9 @@ export const Charts: React.FC = () => {
           <p className="text-sm font-medium text-gray-900 mb-2">{`${label}`}</p>
           {payload.map((entry: any, index: number) => (
             <p key={index} className="text-sm" style={{ color: entry.color }}>
-              {`${entry.dataKey === 'income' ? 'Pajamos' : 
-                 entry.dataKey === 'expenses' ? 'Išlaidos' : 
-                 'Balansas'}: €${entry.value.toFixed(2)}`}
+              {`${entry.dataKey === 'income' ? t('charts.income') : 
+                 entry.dataKey === 'expenses' ? t('charts.expenses') : 
+                 t('charts.balance')}: €${entry.value.toFixed(2)}`}
             </p>
           ))}
         </div>
@@ -44,7 +53,7 @@ export const Charts: React.FC = () => {
       const data = payload[0].payload;
       return (
         <div className="bg-white p-3 rounded-lg shadow-lg border border-gray-200">
-          <p className="text-sm font-medium text-gray-900">{data.category}</p>
+          <p className="text-sm font-medium text-gray-900">{translateCategoryName(data.category, language)}</p>
           <p className="text-sm text-gray-600">€{data.amount.toFixed(2)}</p>
           <p className="text-sm text-gray-600">{data.percentage.toFixed(1)}%</p>
         </div>
@@ -57,7 +66,7 @@ export const Charts: React.FC = () => {
     <div className="space-y-8">
       {/* Monthly Trends */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-6">Mėnesio tendencijos</h3>
+        <h3 className="text-lg font-semibold text-gray-900 mb-6">{t('charts.monthlyTrends')}</h3>
         <div className="h-80">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={monthlyData}>
@@ -80,7 +89,7 @@ export const Charts: React.FC = () => {
                 stroke="#10B981" 
                 strokeWidth={3}
                 dot={{ fill: '#10B981', strokeWidth: 2, r: 4 }}
-                name="Pajamos"
+                name={t('charts.income')}
               />
               <Line 
                 type="monotone" 
@@ -88,7 +97,7 @@ export const Charts: React.FC = () => {
                 stroke="#EF4444" 
                 strokeWidth={3}
                 dot={{ fill: '#EF4444', strokeWidth: 2, r: 4 }}
-                name="Išlaidos"
+                name={t('charts.expenses')}
               />
               <Line 
                 type="monotone" 
@@ -96,7 +105,7 @@ export const Charts: React.FC = () => {
                 stroke="#3B82F6" 
                 strokeWidth={3}
                 dot={{ fill: '#3B82F6', strokeWidth: 2, r: 4 }}
-                name="Balansas"
+                name={t('charts.balance')}
               />
             </LineChart>
           </ResponsiveContainer>
@@ -107,7 +116,7 @@ export const Charts: React.FC = () => {
         {/* Expense Categories */}
         {expenseCategories.length > 0 && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-6">Išlaidų kategorijos</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-6">{t('charts.expenseCategories')}</h3>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -137,7 +146,7 @@ export const Charts: React.FC = () => {
                       style={{ backgroundColor: category.color }}
                     />
                     <span className="text-sm text-gray-600 truncate">
-                      {category.category}
+                      {translateCategoryName(category.category, language)}
                     </span>
                   </div>
                 ))}
@@ -149,10 +158,10 @@ export const Charts: React.FC = () => {
         {/* Income Categories */}
         {incomeCategories.length > 0 && (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-6">Pajamų kategorijos</h3>
+            <h3 className="text-lg font-semibold text-gray-900 mb-6">{t('charts.incomeCategories')}</h3>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={incomeCategories} layout="horizontal">
+                <BarChart data={translatedIncomeCategories} layout="horizontal">
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                   <XAxis 
                     type="number"

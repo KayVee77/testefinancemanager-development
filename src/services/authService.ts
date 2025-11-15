@@ -26,6 +26,8 @@ import {
 import { notificationService } from './notificationService';
 import { logger } from '../errors';
 import { AuthError } from '../errors/ApplicationError';
+import { getTranslation } from '../i18n';
+import { translations } from '../i18n';
 
 /**
  * Auth Service
@@ -63,7 +65,13 @@ export const authService = {
         }
         
         console.log('[AuthService] User logged in:', user.email);
-        notificationService.success(`Sveiki sugrįžę, ${user.name}!`);
+        
+        // Get current language from localStorage
+        const storedLang = localStorage.getItem('finance_language');
+        const currentLang = (storedLang === 'lt' || storedLang === 'en') ? storedLang : 'lt';
+        const message = getTranslation(translations[currentLang], 'auth.welcomeBack', { name: user.name });
+        
+        notificationService.success(message);
         return user;
       }
     } catch (error) {

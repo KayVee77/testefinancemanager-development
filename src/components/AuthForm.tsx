@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { User, Mail, Lock, Eye, EyeOff, LogIn, UserPlus } from 'lucide-react';
 import { LoginCredentials, RegisterData, validateEmail, validatePassword } from '../utils/auth';
 import { sanitizeAndTrim } from '../utils/sanitize';
+import { useTranslation } from '../hooks/useTranslation';
 
 interface AuthFormProps {
   onLogin: (credentials: LoginCredentials) => Promise<boolean>;
@@ -9,6 +10,8 @@ interface AuthFormProps {
 }
 
 export const AuthForm: React.FC<AuthFormProps> = ({ onLogin, onRegister }) => {
+  const { t } = useTranslation();
+  
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -31,19 +34,19 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onLogin, onRegister }) => {
 
     // Validation
     if (!validateEmail(sanitizedEmail)) {
-      setError('Neteisingas el. pašto formatas');
+      setError(t('auth.invalidEmail'));
       setIsLoading(false);
       return;
     }
 
     if (!validatePassword(formData.password)) {
-      setError('Slaptažodis turi būti bent 6 simbolių ilgio');
+      setError(t('auth.invalidPassword'));
       setIsLoading(false);
       return;
     }
 
     if (!isLogin && !sanitizedName) {
-      setError('Vardas yra privalomas');
+      setError(t('auth.nameRequired'));
       setIsLoading(false);
       return;
     }
@@ -57,7 +60,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onLogin, onRegister }) => {
           password: formData.password
         });
         if (!success) {
-          setError('Neteisingas el. paštas arba slaptažodis');
+          setError(t('auth.loginError'));
         }
       } else {
         success = await onRegister({
@@ -66,11 +69,11 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onLogin, onRegister }) => {
           password: formData.password
         });
         if (!success) {
-          setError('Vartotojas su tokiu el. paštu jau egzistuoja');
+          setError(t('auth.registerError'));
         }
       }
     } catch (err) {
-      setError('Įvyko klaida. Bandykite dar kartą.');
+      setError(t('auth.genericError'));
     }
 
     setIsLoading(false);
@@ -90,10 +93,10 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onLogin, onRegister }) => {
               <User className="h-8 w-8 text-blue-600" />
             </div>
             <h1 className="text-2xl font-bold text-gray-900 mb-2">
-              {isLogin ? 'Prisijungimas' : 'Registracija'}
+              {isLogin ? t('auth.login') : t('auth.register')}
             </h1>
             <p className="text-gray-600">
-              {isLogin ? 'Prisijunkite prie savo paskyros' : 'Sukurkite naują paskyrą'}
+              {isLogin ? t('auth.loginTitle') : t('auth.registerTitle')}
             </p>
           </div>
 
@@ -101,7 +104,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onLogin, onRegister }) => {
             {!isLogin && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Vardas
+                  {t('auth.name')}
                 </label>
                 <div className="relative">
                   <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -110,7 +113,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onLogin, onRegister }) => {
                     value={formData.name}
                     onChange={(e) => handleInputChange('name', e.target.value)}
                     className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                    placeholder="Jūsų vardas"
+                    placeholder={t('auth.namePlaceholder')}
                     required={!isLogin}
                   />
                 </div>
@@ -119,7 +122,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onLogin, onRegister }) => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                El. paštas
+                {t('auth.email')}
               </label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -128,7 +131,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onLogin, onRegister }) => {
                   value={formData.email}
                   onChange={(e) => handleInputChange('email', e.target.value)}
                   className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  placeholder="jusu@email.com"
+                  placeholder={t('auth.emailPlaceholder')}
                   required
                 />
               </div>
@@ -136,7 +139,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onLogin, onRegister }) => {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Slaptažodis
+                {t('auth.password')}
               </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
@@ -145,7 +148,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onLogin, onRegister }) => {
                   value={formData.password}
                   onChange={(e) => handleInputChange('password', e.target.value)}
                   className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
-                  placeholder="Bent 6 simboliai"
+                  placeholder={t('auth.passwordPlaceholder')}
                   required
                 />
                 <button
@@ -174,7 +177,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onLogin, onRegister }) => {
               ) : (
                 <>
                   {isLogin ? <LogIn className="h-5 w-5 mr-2" /> : <UserPlus className="h-5 w-5 mr-2" />}
-                  {isLogin ? 'Prisijungti' : 'Registruotis'}
+                  {isLogin ? t('auth.loginButton') : t('auth.registerButton')}
                 </>
               )}
             </button>
@@ -189,14 +192,14 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onLogin, onRegister }) => {
               }}
               className="text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors"
             >
-              {isLogin ? 'Neturite paskyros? Registruokitės' : 'Jau turite paskyrą? Prisijunkite'}
+              {isLogin ? t('auth.noAccount') : t('auth.hasAccount')}
             </button>
           </div>
         </div>
 
         <div className="mt-8 text-center">
           <p className="text-sm text-gray-500">
-            Jūsų duomenys saugomi tik šioje naršyklėje ir niekur nėra siunčiami
+            {t('auth.privacyNotice')}
           </p>
         </div>
       </div>

@@ -12,7 +12,10 @@ import { notificationService } from './services/notificationService';
 import { showStorageWarning } from './utils/storageQuota';
 import { useAuth } from './hooks/useAuth';
 import { useTransactions } from './hooks/useTransactions';
-import { Plus, PieChart, List, BarChart3, Wallet, LogOut, User as UserIcon } from 'lucide-react';
+import { useTheme } from './contexts/ThemeContext';
+import { useLanguage } from './contexts/LanguageContext';
+import { useTranslation } from './hooks/useTranslation';
+import { Plus, PieChart, List, BarChart3, Wallet, LogOut, User as UserIcon, Sun, Moon, Languages } from 'lucide-react';
 
 /**
  * App Component - Main Application Entry Point
@@ -30,6 +33,13 @@ import { Plus, PieChart, List, BarChart3, Wallet, LogOut, User as UserIcon } fro
  * - Layout and routing
  */
 function App() {
+  // Theme from context
+  const { theme, toggleTheme } = useTheme();
+  
+  // Translation hook
+  const { t } = useTranslation();
+  const { language, setLanguage } = useLanguage();
+  
   // Auth state from Zustand store
   const { user, isAuthenticated, isLoading, login, register, logout: authLogout, initialize } = useAuth();
   
@@ -107,9 +117,9 @@ function App() {
       const updatedCategories = [...categories, newCategory];
       setCategories(updatedCategories);
       await saveCategories(user.id, updatedCategories);
-      notificationService.success('Kategorija pridėta');
+      notificationService.success(t('transactions.addCategory'));
     } catch (error) {
-      notificationService.error('Nepavyko pridėti kategorijos');
+      notificationService.error(t('common.error'));
       // Revert on error
       setCategories(categories);
     }
@@ -131,10 +141,10 @@ function App() {
   // Loading screen
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-600">Kraunama...</p>
+          <p className="text-gray-600 dark:text-gray-300">{t('common.loading')}</p>
         </div>
       </div>
     );
@@ -148,38 +158,60 @@ function App() {
   return (
     <ErrorBoundary componentName="App">
       <Toaster />
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 flex items-center">
-                <Wallet className="h-8 w-8 mr-3 text-blue-600" />
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center">
+                <Wallet className="h-8 w-8 mr-3 text-blue-600 dark:text-blue-400" />
                 FinanceFlow
               </h1>
-              <p className="text-gray-600 mt-1">
-                Sveiki, {user?.name}! Valdykite savo asmeninius finansus
+              <p className="text-gray-600 dark:text-gray-300 mt-1">
+                {t('dashboard.welcome', { name: user?.name || '' })}
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <div className="flex items-center text-sm text-gray-600 bg-white px-3 py-2 rounded-lg border border-gray-100">
+              {/* Language Toggle Button */}
+              <button
+                onClick={() => setLanguage(language === 'lt' ? 'en' : 'lt')}
+                className="flex items-center px-3 py-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-white dark:hover:bg-gray-700 rounded-lg transition-colors border border-gray-200 dark:border-gray-600"
+                aria-label="Toggle language"
+                title={language === 'lt' ? 'Switch to English' : 'Pereiti į lietuvių kalbą'}
+              >
+                <Languages className="h-5 w-5 mr-1" />
+                <span className="text-sm font-medium">{language.toUpperCase()}</span>
+              </button>
+              {/* Theme Toggle Button */}
+              <button
+                onClick={toggleTheme}
+                className="flex items-center px-3 py-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-white dark:hover:bg-gray-700 rounded-lg transition-colors border border-gray-200 dark:border-gray-600"
+                aria-label="Toggle theme"
+              >
+                {theme === 'light' ? (
+                  <Moon className="h-5 w-5" />
+                ) : (
+                  <Sun className="h-5 w-5" />
+                )}
+              </button>
+              <div className="flex items-center text-sm text-gray-600 dark:text-gray-300 bg-white dark:bg-gray-800 px-3 py-2 rounded-lg border border-gray-100 dark:border-gray-700">
                 <UserIcon className="h-4 w-4 mr-2" />
                 {user?.email}
               </div>
               <button
                 onClick={handleLogout}
-                className="flex items-center px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-white rounded-lg transition-colors border border-gray-200"
+                className="flex items-center px-4 py-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-white dark:hover:bg-gray-700 rounded-lg transition-colors border border-gray-200 dark:border-gray-600"
               >
                 <LogOut className="h-4 w-4 mr-2" />
-                Atsijungti
+                {t('auth.logout')}
               </button>
               <button
                 onClick={() => setIsFormOpen(true)}
-                className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors shadow-lg hover:shadow-xl"
+                className="flex items-center px-6 py-3 bg-blue-600 dark:bg-blue-500 text-white rounded-xl hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors shadow-lg hover:shadow-xl"
               >
                 <Plus className="h-5 w-5 mr-2" />
-                Pridėti transakciją
+                {t('dashboard.addTransaction')}
               </button>
             </div>
           </div>
@@ -187,39 +219,39 @@ function App() {
 
         {/* Navigation Tabs */}
         <div className="mb-8">
-          <div className="flex bg-white rounded-xl shadow-sm border border-gray-100 p-1">
+          <div className="flex bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-1">
             <button
               onClick={() => setActiveTab('dashboard')}
               className={`flex items-center px-6 py-3 rounded-lg transition-all flex-1 justify-center ${
                 activeTab === 'dashboard'
                   ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700'
               }`}
             >
               <BarChart3 className="h-5 w-5 mr-2" />
-              Apžvalga
+              {t('nav.dashboard')}
             </button>
             <button
               onClick={() => setActiveTab('transactions')}
               className={`flex items-center px-6 py-3 rounded-lg transition-all flex-1 justify-center ${
                 activeTab === 'transactions'
                   ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700'
               }`}
             >
               <List className="h-5 w-5 mr-2" />
-              Transakcijos
+              {t('nav.transactions')}
             </button>
             <button
               onClick={() => setActiveTab('charts')}
               className={`flex items-center px-6 py-3 rounded-lg transition-all flex-1 justify-center ${
                 activeTab === 'charts'
                   ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700'
               }`}
             >
               <PieChart className="h-5 w-5 mr-2" />
-              Grafikai
+              {t('nav.charts')}
             </button>
           </div>
         </div>
