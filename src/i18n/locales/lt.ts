@@ -46,6 +46,11 @@ export const lt = {
     emailPlaceholder: 'jusu@email.com',
     passwordPlaceholder: 'Bent 6 simboliai',
     privacyNotice: 'Jūsų duomenys saugomi tik šioje naršyklėje ir niekur nėra siunčiami',
+    // Validation messages
+    emailRequired: 'El. paštas yra privalomas.',
+    emailInvalid: 'Įveskite galiojantį el. pašto adresą.',
+    passwordRequired: 'Slaptažodis yra privalomas.',
+    passwordTooShort: 'Slaptažodis turi būti bent 6 simbolių ilgio.',
     invalidEmail: 'Neteisingas el. pašto formatas',
     invalidPassword: 'Slaptažodis turi būti bent 6 simbolių ilgio',
     nameRequired: 'Vardas yra privalomas',
