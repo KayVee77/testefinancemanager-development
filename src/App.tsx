@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Category } from './types/Transaction';
-import { getStoredCategories, saveCategories } from './utils/storage';
-import { LoginCredentials, RegisterData } from './utils/auth';
+import { Transaction, Category } from './types/Transaction';
+import { AuthState } from './types/User';
+import { getStoredTransactions, saveTransactions, getStoredCategories, saveCategories } from './utils/storage';
+import { getCurrentUser, setCurrentUser, logout, authenticateUser, saveUser, emailExists, LoginCredentials, RegisterData } from './utils/auth';
 import { Dashboard } from './components/Dashboard';
 import { TransactionForm } from './components/TransactionForm';
 import { TransactionList } from './components/TransactionList';
@@ -11,8 +12,6 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { Toaster } from './services/notificationService';
 import { notificationService } from './services/notificationService';
 import { showStorageWarning } from './utils/storageQuota';
-import { useAuth } from './hooks/useAuth';
-import { useTransactions } from './hooks/useTransactions';
 import { Plus, PieChart, List, BarChart3, Wallet, LogOut, User as UserIcon } from 'lucide-react';
 
 /**
@@ -49,34 +48,66 @@ function App() {
 
   // Load categories when user logs in
   useEffect(() => {
-    const loadCategories = async () => {
-      if (user) {
+    const loadUserData = async () => {
+      if (authState.user) {
         try {
-          const loadedCategories = await getStoredCategories(user.id);
+          const [loadedTransactions, loadedCategories] = await Promise.all([
+            getStoredTransactions(authState.user.id),
+            getStoredCategories(authState.user.id)
+          ]);
+          setTransactions(loadedTransactions);
           setCategories(loadedCategories);
+          
+          // Check storage quota and show warning if needed
           showStorageWarning();
         } catch (error) {
-          notificationService.error('Nepavyko užkrauti kategorijų');
+          notificationService.error('Nepavyko užkrauti duomenų');
         }
       }
     };
-    loadCategories();
-  }, [user]);
+    
+    loadUserData();
+  }, [authState.user]);
 
   const handleLogin = async (credentials: LoginCredentials): Promise<boolean> => {
     try {
-      await login(credentials);
-      return true;
+      const user = await authenticateUser(credentials);
+      if (user) {
+        setCurrentUser(user);
+        setAuthState({
+          user,
+          isAuthenticated: true,
+          isLoading: false
+        });
+        notificationService.success('Sėkmingai prisijungėte');
+        return true;
+      }
+      notificationService.error('Neteisingas el. paštas arba slaptažodis');
+      return false;
     } catch (error) {
+      notificationService.error('Prisijungimo klaida');
       return false;
     }
   };
 
   const handleRegister = async (data: RegisterData): Promise<boolean> => {
     try {
-      await register(data);
+      if (emailExists(data.email)) {
+        notificationService.error('El. paštas jau naudojamas');
+        return false;
+      }
+
+      const user = await saveUser(data);
+      setCurrentUser(user);
+      setAuthState({
+        user,
+        isAuthenticated: true,
+        isLoading: false
+      });
+      notificationService.success('Paskyra sėkmingai sukurta');
       return true;
     } catch (error) {
+      notificationService.error('Nepavyko sukurti paskyros');
       return false;
     }
   };
@@ -87,8 +118,44 @@ function App() {
     setActiveTab('dashboard');
   };
 
+  const addTransaction = async (transactionData: Omit<Transaction, 'id' | 'createdAt'>) => {
+    if (!authState.user) return;
+
+    try {
+      const newTransaction: Transaction = {
+        ...transactionData,
+        id: Date.now().toString(),
+        createdAt: new Date()
+      };
+
+      const updatedTransactions = [...transactions, newTransaction];
+      setTransactions(updatedTransactions);
+      await saveTransactions(authState.user.id, updatedTransactions);
+      notificationService.success('Transakcija pridėta');
+    } catch (error) {
+      notificationService.error('Nepavyko pridėti transakcijos');
+      // Revert on error
+      setTransactions(transactions);
+    }
+  };
+
+  const deleteTransaction = async (id: string) => {
+    if (!authState.user) return;
+
+    try {
+      const updatedTransactions = transactions.filter(t => t.id !== id);
+      setTransactions(updatedTransactions);
+      await saveTransactions(authState.user.id, updatedTransactions);
+      notificationService.success('Transakcija ištrinta');
+    } catch (error) {
+      notificationService.error('Nepavyko ištrinti transakcijos');
+      // Revert on error
+      setTransactions(transactions);
+    }
+  };
+
   const addCategory = async (categoryData: Omit<Category, 'id'>) => {
-    if (!user) return;
+    if (!authState.user) return;
 
     try {
       const newCategory: Category = {
@@ -98,10 +165,11 @@ function App() {
 
       const updatedCategories = [...categories, newCategory];
       setCategories(updatedCategories);
-      await saveCategories(user.id, updatedCategories);
+      await saveCategories(authState.user.id, updatedCategories);
       notificationService.success('Kategorija pridėta');
     } catch (error) {
       notificationService.error('Nepavyko pridėti kategorijos');
+      // Revert on error
       setCategories(categories);
     }
   };

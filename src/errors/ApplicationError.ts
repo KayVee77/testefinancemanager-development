@@ -45,7 +45,7 @@ export interface ErrorContext {
   component?: string;
   action?: string;
   timestamp: string;
-  environment: 'local' | 'aws';
+  environment: 'local' | 'production';
   metadata?: Record<string, any>;
 }
 

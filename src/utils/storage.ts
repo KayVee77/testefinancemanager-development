@@ -8,6 +8,10 @@ import { httpClient } from './http';
 // In production, data will be encrypted at rest by DynamoDB (AWS KMS)
 // and in transit via HTTPS (API Gateway)
 
+// Note: Client-side encryption removed for AWS deployment readiness
+// In production, data will be encrypted at rest by DynamoDB (AWS KMS)
+// and in transit via HTTPS (API Gateway)
+
 const getStorageKey = (userId: string, key: string): string => {
   return `finance_${userId}_${key}`;
 };

@@ -1,6 +1,5 @@
 import { User } from '../types/User';
 import CryptoJS from 'crypto-js';
-import { AuthError, StorageError, logger } from '../errors';
 
 /**
  * DEV-ONLY AUTHENTICATION
@@ -91,43 +90,73 @@ export const getStoredUsers = (): StoredUser[] => {
   }
 };
 
-export const saveUser = async (userData: RegisterData): Promise<User> => {
-  try {
-    const users = getStoredUsers();
-    const salt = generateSalt();
-    const newUser: StoredUser = {
-      id: Date.now().toString(),
-      email: userData.email,
-      name: userData.name,
-      passwordHash: hashPassword(userData.password, salt),
-      salt: salt,
-      createdAt: new Date().toISOString()
-    };
+export const saveUser = (userData: RegisterData): User => {
+  const users = getStoredUsers();
+  const salt = generateSalt();
+  const newUser: StoredUser = {
+    id: Date.now().toString(),
+    email: userData.email,
+    name: userData.name,
+    passwordHash: hashPassword(userData.password, salt),
+    salt: salt,
+    createdAt: new Date().toISOString()
+  };
 
-    users.push(newUser);
-    localStorage.setItem(USERS_KEY, JSON.stringify(users));
+  users.push(newUser);
+  localStorage.setItem(USERS_KEY, JSON.stringify(users));
 
-    const user: User = {
-      id: newUser.id,
-      email: newUser.email,
-      name: newUser.name,
-      createdAt: new Date(newUser.createdAt),
-      lastLogin: new Date()
-    };
+  const user: User = {
+    id: newUser.id,
+    email: newUser.email,
+    name: newUser.name,
+    createdAt: new Date(newUser.createdAt),
+    lastLogin: new Date()
+  };
 
-    return user;
-  } catch (error) {
-    // Check for quota exceeded error
-    if (error instanceof DOMException && error.code === 22) {
-      const storageError = new StorageError('Saugykla pilna. Nepavyko sukurti paskyros.');
-      await logger.log(storageError);
-      throw storageError;
+  return user;
+};
+
+export const authenticateUser = (credentials: LoginCredentials): User | null => {
+  const users = getStoredUsers();
+  const user = users.find(u => u.email === credentials.email);
+
+  if (!user) return null;
+
+  // Check if user has new secure hash with salt
+  if (user.salt) {
+    const isValid = verifyPassword(credentials.password, user.passwordHash, user.salt);
+    if (isValid) {
+      const authenticatedUser: User = {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        createdAt: new Date(user.createdAt),
+        lastLogin: new Date()
+      };
+      return authenticatedUser;
     }
-    
-    // Generic storage error
-    const storageError = new StorageError('Nepavyko išsaugoti vartotojo duomenų', error);
-    await logger.log(storageError);
-    throw storageError;
+  } else {
+    // Legacy support: user has old simple hash
+    // Check with old hash method
+    if (user.passwordHash === simpleHash(credentials.password)) {
+      // Migrate to new secure hash
+      const salt = generateSalt();
+      user.salt = salt;
+      user.passwordHash = hashPassword(credentials.password, salt);
+      
+      // Update storage with new hash
+      const allUsers = users.map(u => u.id === user.id ? user : u);
+      localStorage.setItem(USERS_KEY, JSON.stringify(allUsers));
+      
+      const authenticatedUser: User = {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        createdAt: new Date(user.createdAt),
+        lastLogin: new Date()
+      };
+      return authenticatedUser;
+    }
   }
 };
 
