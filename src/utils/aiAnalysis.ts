@@ -2,6 +2,18 @@ import { Transaction, Category } from '../types/Transaction';
 import { startOfMonth, endOfMonth, differenceInDays } from 'date-fns';
 
 /**
+ * Follow-up prompt type for interactive flashcards
+ */
+export interface FollowUpPrompt {
+  id: string;
+  labelLT: string;
+  labelEN: string;
+  promptLT: string;
+  promptEN: string;
+  emoji: string;
+}
+
+/**
  * AI Budget Summary - Aggregated, anonymized financial data for AI analysis
  * NO PII: No transaction IDs, user IDs, descriptions, or personal identifiers
  */
@@ -175,5 +187,126 @@ export async function generateAISuggestions(
       : new Error('Nepavyko sugeneruoti pasiūlymų. Patikrinkite interneto ryšį.');
   }
 }
+
+/**
+ * Generate follow-up response based on user's flashcard selection
+ * Takes the original summary and initial suggestions as context
+ * 
+ * @param followUpPrompt - The user's selected follow-up question
+ * @param originalSummary - The original budget summary for context
+ * @param initialSuggestions - The initial AI suggestions for reference
+ * @param language - Language for the response
+ */
+export async function generateFollowUpResponse(
+  followUpPrompt: string,
+  originalSummary: BudgetAiSummary,
+  initialSuggestions: string[],
+  language: 'lt' | 'en' = 'lt'
+): Promise<string> {
+  const localDevUrl = import.meta.env.VITE_API_BASE_URL;
+  const awsUrl = import.meta.env.VITE_API_GATEWAY_URL;
+  const apiUrl = localDevUrl || awsUrl || 'http://localhost:3001';
+  
+  console.log(`🔄 Calling follow-up API: ${apiUrl}/api/ai/follow-up`);
+  
+  try {
+    const response = await fetch(`${apiUrl}/api/ai/follow-up`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ 
+        followUpPrompt,
+        originalSummary,
+        initialSuggestions,
+        language 
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      
+      if (response.status === 429) {
+        throw new Error('Pasiektas užklausų limitas. Pabandykite vėliau.');
+      }
+
+      if (response.status === 500 && errorData.message) {
+        throw new Error(errorData.message);
+      }
+      
+      throw new Error('Nepavyko sugeneruoti atsakymo');
+    }
+
+    const data = await response.json();
+    console.log(`✅ Received follow-up response (${data.response?.length || 0} chars)`);
+    
+    return data.response || '';
+  } catch (error) {
+    console.error('❌ Follow-up error:', error);
+    
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      throw new Error('Nepavyko prisijungti prie AI serverio. Patikrinkite, ar dev-server veikia.');
+    }
+    
+    throw error instanceof Error 
+      ? error 
+      : new Error('Nepavyko sugeneruoti atsakymo. Patikrinkite interneto ryšį.');
+  }
+}
+
+/**
+ * Predefined follow-up prompts (flashcards) for interactive demo
+ * These appear after initial suggestions are generated
+ */
+export const FOLLOW_UP_PROMPTS: FollowUpPrompt[] = [
+  {
+    id: 'explain-detail',
+    emoji: '🔍',
+    labelLT: 'Paaiškink detaliau',
+    labelEN: 'Explain in more detail',
+    promptLT: 'Paaiškink vieną iš šių pasiūlymų detaliau su konkrečiais veiksmais, kuriuos galėčiau atlikti.',
+    promptEN: 'Explain one of these suggestions in more detail with specific steps I could take.',
+  },
+  {
+    id: 'give-example',
+    emoji: '💡',
+    labelLT: 'Duok pavyzdį',
+    labelEN: 'Give me an example',
+    promptLT: 'Duok konkretų pavyzdį, kaip galėčiau pritaikyti vieną iš šių pasiūlymų savo situacijoje.',
+    promptEN: 'Give me a concrete example of how I could apply one of these suggestions to my situation.',
+  },
+  {
+    id: 'budget-improvement',
+    emoji: '🎯',
+    labelLT: 'Biudžeto tobulinimas',
+    labelEN: 'Suggest budget improvement',
+    promptLT: 'Pasiūlyk, kaip galėčiau dar labiau patobulinti savo biudžetą kitam mėnesiui.',
+    promptEN: 'Suggest how I could further improve my budget for next month.',
+  },
+  {
+    id: 'savings-challenge',
+    emoji: '🚀',
+    labelLT: 'Taupymo iššūkis',
+    labelEN: 'Savings challenge',
+    promptLT: 'Sukurk man 30 dienų taupymo iššūkį su konkrečiais tikslais.',
+    promptEN: 'Create a 30-day savings challenge for me with specific goals.',
+  },
+  {
+    id: 'category-focus',
+    emoji: '📊',
+    labelLT: 'Kategorijos analizė',
+    labelEN: 'Category analysis',
+    promptLT: 'Paanalizuok mano didžiausią išlaidų kategoriją ir pasiūlyk, kaip ją optimizuoti.',
+    promptEN: 'Analyze my biggest expense category and suggest how to optimize it.',
+  },
+  {
+    id: 'quick-wins',
+    emoji: '⚡',
+    labelLT: 'Greiti sprendimai',
+    labelEN: 'Quick wins',
+    promptLT: 'Kokius greitus, paprastus pakeitimus galėčiau padaryti šią savaitę, kad sutaupyčiau pinigų?',
+    promptEN: 'What quick, simple changes could I make this week to save money?',
+  },
+];
 
 
