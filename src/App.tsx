@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Category } from './types/Transaction';
+import { Category, Transaction } from './types/Transaction';
 import { getStoredCategories, saveCategories } from './utils/storage';
 import { Dashboard } from './components/Dashboard';
 import { TransactionForm } from './components/TransactionForm';
@@ -44,11 +44,12 @@ function App() {
   const { user, isAuthenticated, isLoading, login, register, logout: authLogout, initialize } = useAuth();
   
   // Transaction state from Zustand store (transactions are auto-loaded by the hook)
-  const { add: addTransaction } = useTransactions();
+  const { add: addTransaction, update: updateTransaction } = useTransactions();
   
   // Local UI state (not shared across components)
   const [categories, setCategories] = useState<Category[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'reports'>('dashboard');
 
   // Initialize auth on mount (checks localStorage or Cognito)
@@ -104,6 +105,29 @@ function App() {
     setActiveTab('dashboard');
   };
 
+  // Handle editing a transaction
+  const handleEditTransaction = (transaction: Transaction) => {
+    setEditingTransaction(transaction);
+    setIsFormOpen(true);
+  };
+
+  // Handle updating a transaction
+  const handleUpdateTransaction = async (id: string, updates: Partial<Transaction>) => {
+    try {
+      await updateTransaction(id, updates);
+      setIsFormOpen(false);
+      setEditingTransaction(null);
+    } catch (error) {
+      // Error handled by hook
+    }
+  };
+
+  // Handle closing form (reset editing state)
+  const handleCloseForm = () => {
+    setIsFormOpen(false);
+    setEditingTransaction(null);
+  };
+
   // Handle adding new category
   const addCategory = async (categoryData: Omit<Category, 'id'>) => {
     if (!user) return;
@@ -130,7 +154,7 @@ function App() {
       case 'dashboard':
         return <Dashboard />;
       case 'transactions':
-        return <TransactionList categories={categories} />;
+        return <TransactionList categories={categories} onEdit={handleEditTransaction} />;
       case 'reports':
         return <ReportsSection />;
       default:
@@ -207,7 +231,10 @@ function App() {
                 {t('auth.logout')}
               </button>
               <button
-                onClick={() => setIsFormOpen(true)}
+                onClick={() => {
+                  setEditingTransaction(null);
+                  setIsFormOpen(true);
+                }}
                 className="flex items-center px-6 py-3 bg-blue-600 dark:bg-blue-500 text-white rounded-xl hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors shadow-lg hover:shadow-xl"
               >
                 <Plus className="h-5 w-5 mr-2" />
@@ -263,8 +290,10 @@ function App() {
         <TransactionForm
           categories={categories}
           onAddTransaction={addTransaction}
+          onUpdateTransaction={handleUpdateTransaction}
+          initialData={editingTransaction}
           isOpen={isFormOpen}
-          onClose={() => setIsFormOpen(false)}
+          onClose={handleCloseForm}
           onAddCategory={addCategory}
         />
       </div>

@@ -3,12 +3,13 @@ import { Category } from '../types/Transaction';
 import { useTransactions } from '../hooks/useTransactions';
 import { useTranslation } from '../hooks/useTranslation';
 import { translateCategoryName } from '../i18n';
-import { Trash2, Calendar } from 'lucide-react';
+import { Trash2, Calendar, Edit2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ImportExportToolbar } from './ImportExport/ImportExportToolbar';
 
 interface TransactionListProps {
   categories: Category[];
+  onEdit: (transaction: import('../types/Transaction').Transaction) => void;
 }
 
 /**
@@ -20,7 +21,7 @@ interface TransactionListProps {
  * - Uses useTransactions() hook for data and operations
  * - Delete operation now handled internally via hook
  */
-export const TransactionList: React.FC<TransactionListProps> = ({ categories }) => {
+export const TransactionList: React.FC<TransactionListProps> = ({ categories, onEdit }) => {
   const { transactions, remove: deleteTransaction } = useTransactions();
   const { t, language } = useTranslation();
   
@@ -142,8 +143,16 @@ export const TransactionList: React.FC<TransactionListProps> = ({ categories }) 
                       {transaction.type === 'income' ? '+' : '-'}€{transaction.amount.toFixed(2)}
                     </span>
                     <button
+                      onClick={() => onEdit(transaction)}
+                      className="p-1 text-gray-400 dark:text-gray-500 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors"
+                      title={t('common.edit')}
+                    >
+                      <Edit2 className="h-4 w-4" />
+                    </button>
+                    <button
                       onClick={() => handleDelete(transaction.id)}
                       className="p-1 text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
+                      title={t('common.delete')}
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
