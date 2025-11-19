@@ -171,6 +171,25 @@ export const en = {
     transactions: 'Transactions',
     charts: 'Charts',
     reports: 'Reports',
+    budgetOptimization: 'Budget Optimization',
+  },
+
+  // Budget Optimization
+  budgetOptimization: {
+    title: 'Budget Optimization',
+    description: 'Artificial Intelligence (AI) analyzes your financial data and provides personalized recommendations for budget optimization and savings opportunities.',
+    generateButton: 'Generate Financial Analysis with AI',
+    generating: 'Generating...',
+    analyzedPeriod: 'Analyzed period',
+    notEnoughDataTitle: 'Not enough data',
+    notEnoughDataMessage: 'At least 10 transactions over the past 7 days are required to generate suggestions. Add more transactions and try again.',
+    suggestionsTitle: 'AI Suggestions',
+    disclaimerTitle: 'Important',
+    disclaimerText: 'Suggestions are for informational purposes only and do not constitute individual financial advice. Always consider your personal situation before making financial decisions.',
+    errorTitle: 'Error generating suggestions',
+    errorGeneric: 'Failed to generate suggestions. Check your internet connection or try again later.',
+    retry: 'Try again',
+    poweredBy: 'Powered by GPT-4.1-mini',
   },
 
   // Reports and Analytics
