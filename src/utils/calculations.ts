@@ -178,7 +178,8 @@ export const getTransactionsInRange = (
     if (fromDate && transaction.date < fromDate) {
       return false;
     }
-    if (toDate && transaction.date > toDate) {
+    // Use endOfDay to make upper bound inclusive (include entire end date)
+    if (toDate && transaction.date > endOfDay(toDate)) {
       return false;
     }
     return true;

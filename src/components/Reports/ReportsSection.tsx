@@ -273,7 +273,7 @@ export const ReportsSection: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                  {filteredTransactions
+                  {[...filteredTransactions]
                     .sort((a, b) => b.date.getTime() - a.date.getTime())
                     .map((transaction) => (
                       <tr key={transaction.id} className="hover:bg-gray-50 dark:hover:bg-gray-900/30">
