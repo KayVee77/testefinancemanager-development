@@ -54,7 +54,7 @@ export const TransactionList: React.FC<TransactionListProps> = ({ categories }) 
           {/* Header Row: Title + Import/Export Toolbar */}
           <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white">{t('transactions.history')}</h3>
-            <ImportExportToolbar />
+            <ImportExportToolbar transactions={filteredTransactions} />
           </div>
 
           {/* Filters Row */}

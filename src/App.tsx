@@ -4,7 +4,7 @@ import { getStoredCategories, saveCategories } from './utils/storage';
 import { Dashboard } from './components/Dashboard';
 import { TransactionForm } from './components/TransactionForm';
 import { TransactionList } from './components/TransactionList';
-import { Charts } from './components/Charts';
+import { ReportsSection } from './components/Reports/ReportsSection';
 import { AuthForm } from './components/AuthForm';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Toaster } from './services/notificationService';
@@ -15,7 +15,7 @@ import { useTransactions } from './hooks/useTransactions';
 import { useTheme } from './contexts/ThemeContext';
 import { useLanguage } from './contexts/LanguageContext';
 import { useTranslation } from './hooks/useTranslation';
-import { Plus, PieChart, List, BarChart3, Wallet, LogOut, User as UserIcon, Sun, Moon, Languages } from 'lucide-react';
+import { Plus, List, BarChart3, Wallet, LogOut, User as UserIcon, Sun, Moon, Languages, FileText } from 'lucide-react';
 
 /**
  * App Component - Main Application Entry Point
@@ -49,7 +49,7 @@ function App() {
   // Local UI state (not shared across components)
   const [categories, setCategories] = useState<Category[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'charts'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'reports'>('dashboard');
 
   // Initialize auth on mount (checks localStorage or Cognito)
   useEffect(() => {
@@ -131,8 +131,8 @@ function App() {
         return <Dashboard />;
       case 'transactions':
         return <TransactionList categories={categories} />;
-      case 'charts':
-        return <Charts />;
+      case 'reports':
+        return <ReportsSection />;
       default:
         return <Dashboard />;
     }
@@ -243,15 +243,15 @@ function App() {
               {t('nav.transactions')}
             </button>
             <button
-              onClick={() => setActiveTab('charts')}
+              onClick={() => setActiveTab('reports')}
               className={`flex items-center px-6 py-3 rounded-lg transition-all flex-1 justify-center ${
-                activeTab === 'charts'
+                activeTab === 'reports'
                   ? 'bg-blue-600 text-white shadow-sm'
                   : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700'
               }`}
             >
-              <PieChart className="h-5 w-5 mr-2" />
-              {t('nav.charts')}
+              <FileText className="h-5 w-5 mr-2" />
+              {t('nav.reports')}
             </button>
           </div>
         </div>

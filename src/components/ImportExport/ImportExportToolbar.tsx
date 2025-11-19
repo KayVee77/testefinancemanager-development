@@ -3,15 +3,28 @@
  * 
  * Combines ImportModal and ExportButton into a single toolbar
  * to be added to the TransactionList page
+ * 
+ * ✨ ENHANCED for Bug 6:
+ * - Added optional transactions prop to support exporting filtered data
+ * - Passes transactions to ExportButton for filtered exports
  */
 
 import React, { useState } from 'react';
 import { Upload } from 'lucide-react';
 import { useTranslation } from '../../hooks/useTranslation';
+import { Transaction } from '../../types/Transaction';
 import { ImportModal } from './ImportModal';
 import { ExportButton } from './ExportButton';
 
-export const ImportExportToolbar: React.FC = () => {
+interface ImportExportToolbarProps {
+  /**
+   * Optional: Specific transactions to export (e.g., filtered subset)
+   * If not provided, ExportButton will export all transactions from store
+   */
+  transactions?: Transaction[];
+}
+
+export const ImportExportToolbar: React.FC<ImportExportToolbarProps> = ({ transactions }) => {
   const { t } = useTranslation();
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
@@ -28,7 +41,7 @@ export const ImportExportToolbar: React.FC = () => {
         </button>
 
         {/* Export Button */}
-        <ExportButton />
+        <ExportButton transactions={transactions} />
       </div>
 
       {/* Import Modal */}

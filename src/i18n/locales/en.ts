@@ -24,6 +24,7 @@ export const en = {
     month: 'Month',
     new: 'New',
     of: 'of',
+    selected: 'selected',
   },
 
   // Authentication
@@ -168,6 +169,48 @@ export const en = {
     dashboard: 'Dashboard',
     transactions: 'Transactions',
     charts: 'Charts',
+    reports: 'Reports',
+  },
+
+  // Reports and Analytics
+  reports: {
+    title: 'Reports & Analytics',
+    subtitle: 'Analyze your finances by period and category',
+    filters: {
+      title: 'Filters',
+      dateFrom: 'From',
+      dateTo: 'To',
+      dateRange: 'Date Range',
+      apply: 'Apply',
+      clear: 'Clear Filters',
+      quickFilters: 'Quick Filters',
+      last7days: 'Last 7 days',
+      last30days: 'Last 30 days',
+      thisMonth: 'This month',
+      lastMonth: 'Last month',
+      thisYear: 'This year',
+      customRange: 'Custom Range',
+      categoryLabel: 'Categories',
+      allCategories: 'All Categories',
+      typeLabel: 'Type',
+      allTypes: 'All Types',
+      activeFilters: 'Active Filters',
+      exportFiltered: 'Export Filtered Data',
+    },
+    kpi: {
+      totalIncome: 'Total Income',
+      totalExpenses: 'Total Expenses',
+      balance: 'Balance',
+      transactionCount: 'Transaction Count',
+      avgTransaction: 'Average Transaction',
+    },
+    empty: 'No data for selected period',
+    noDataWithFilters: 'No transactions found with selected filters',
+    clearFiltersToSeeData: 'Clear filters to see data',
+    noTransactions: 'No transactions yet',
+    addFirstTransaction: 'Add your first transaction',
+    filteredTransactions: 'Filtered Transactions',
+    showingTransactions: 'Showing {count} transactions',
   },
 
   // Categories (default)

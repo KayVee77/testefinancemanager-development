@@ -2,23 +2,39 @@
  * ExportButton Component - Export Transactions to CSV
  * 
  * Features:
- * ✅ Export all transactions
+ * ✅ Export all transactions OR filtered subset
  * ✅ Download with timestamped filename
  * ✅ Success feedback
  * ✅ Handles empty state
+ * 
+ * ✨ ENHANCED for Bug 6:
+ * - Added optional transactions prop to support exporting filtered data
+ * - Falls back to all transactions from store if no prop provided (backward compatible)
  */
 
 import React, { useState } from 'react';
 import { Download } from 'lucide-react';
 import { useTranslation } from '../../hooks/useTranslation';
 import { useTransactions } from '../../hooks/useTransactions';
+import { Transaction } from '../../types/Transaction';
 import { generateCSV, generateFilename, downloadCSV } from '../../utils/csv/generator';
 import toast from 'react-hot-toast';
 
-export const ExportButton: React.FC = () => {
+interface ExportButtonProps {
+  /**
+   * Optional: Specific transactions to export (e.g., filtered subset)
+   * If not provided, exports all transactions from store
+   */
+  transactions?: Transaction[];
+}
+
+export const ExportButton: React.FC<ExportButtonProps> = ({ transactions: transactionsProp }) => {
   const { t, language } = useTranslation();
-  const { transactions } = useTransactions();
+  const { transactions: allTransactions } = useTransactions();
   const [isExporting, setIsExporting] = useState(false);
+
+  // Use prop if provided, otherwise fall back to all transactions (backward compatibility)
+  const transactions = transactionsProp ?? allTransactions;
 
   const handleExport = async () => {
     if (transactions.length === 0) {
