@@ -24,6 +24,7 @@ export const lt = {
     month: 'Mėnuo',
     new: 'Nauja',
     of: 'iš',
+    selected: 'pasirinkta',
   },
 
   // Authentication
@@ -168,6 +169,48 @@ export const lt = {
     dashboard: 'Apžvalga',
     transactions: 'Transakcijos',
     charts: 'Grafikai',
+    reports: 'Ataskaitos',
+  },
+
+  // Reports and Analytics
+  reports: {
+    title: 'Ataskaitos ir Analizė',
+    subtitle: 'Analizuokite savo finansus pagal laikotarpius ir kategorijas',
+    filters: {
+      title: 'Filtrai',
+      dateFrom: 'Nuo',
+      dateTo: 'Iki',
+      dateRange: 'Laiko periodas',
+      apply: 'Taikyti',
+      clear: 'Išvalyti filtrus',
+      quickFilters: 'Greiti filtrai',
+      last7days: 'Paskutinės 7 dienos',
+      last30days: 'Paskutinės 30 dienų',
+      thisMonth: 'Šis mėnuo',
+      lastMonth: 'Praėjęs mėnuo',
+      thisYear: 'Šie metai',
+      customRange: 'Pasirinktas laikotarpis',
+      categoryLabel: 'Kategorijos',
+      allCategories: 'Visos kategorijos',
+      typeLabel: 'Tipas',
+      allTypes: 'Visi tipai',
+      activeFilters: 'Aktyvūs filtrai',
+      exportFiltered: 'Eksportuoti filtruotus duomenis',
+    },
+    kpi: {
+      totalIncome: 'Bendros pajamos',
+      totalExpenses: 'Bendros išlaidos',
+      balance: 'Balansas',
+      transactionCount: 'Transakcijų skaičius',
+      avgTransaction: 'Vidutinė transakcija',
+    },
+    empty: 'Nėra duomenų pasirinktame periode',
+    noDataWithFilters: 'Nerasta transakcijų pagal pasirinktus filtrus',
+    clearFiltersToSeeData: 'Išvalykite filtrus, kad pamatytumėte duomenis',
+    noTransactions: 'Dar neturite transakcijų',
+    addFirstTransaction: 'Pridėkite pirmąją transakciją',
+    filteredTransactions: 'Filtruotos transakcijos',
+    showingTransactions: 'Rodoma transakcijų: {count}',
   },
 
   // Categories (default)

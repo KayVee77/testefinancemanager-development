@@ -3,10 +3,28 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   PieChart, Pie, Cell, BarChart, Bar, ResponsiveContainer
 } from 'recharts';
+import { Transaction } from '../types/Transaction';
 import { useTransactions } from '../hooks/useTransactions';
 import { useTranslation } from '../hooks/useTranslation';
 import { translateCategoryName } from '../i18n';
 import { calculateMonthlyData, calculateCategorySummary } from '../utils/calculations';
+
+interface ChartsProps {
+  /**
+   * Optional transaction array for filtering (e.g., from Reports section)
+   * If not provided, defaults to all transactions from store
+   */
+  transactions?: Transaction[];
+  /**
+   * Optional date range for chart X-axis (for Reports filtering)
+   * When provided, charts will only show data within this range
+   * See Bugs/FunctionalityTesting/bug2.md
+   */
+  dateRange?: {
+    fromDate?: Date | null;
+    toDate?: Date | null;
+  };
+}
 
 /**
  * Charts Component - Financial Data Visualizations
@@ -15,12 +33,25 @@ import { calculateMonthlyData, calculateCategorySummary } from '../utils/calcula
  * - Removed transactions prop (was prop drilling from App.tsx)
  * - Uses useTransactions() hook to access Zustand store directly
  * - No props needed - self-contained component
+ * 
+ * ✨ ENHANCED in Phase 2.2 (Reports Feature):
+ * - Added optional transactions prop for filtered data support
+ * - Maintains backward compatibility (defaults to store if prop not provided)
+ * - Enables Reports section to pass filtered transaction array
+ * - Added dateRange prop to control chart X-axis range (bug2 fix)
  */
-export const Charts: React.FC = () => {
-  const { transactions } = useTransactions();
+export const Charts: React.FC<ChartsProps> = ({ transactions: transactionsProp, dateRange }) => {
+  const { transactions: storeTransactions } = useTransactions();
   const { t, language } = useTranslation();
+  
+  // Use prop if provided, otherwise fall back to store (backward compatibility)
+  const transactions = transactionsProp ?? storeTransactions;
 
-  const monthlyData = calculateMonthlyData(transactions);
+  const monthlyData = calculateMonthlyData(
+    transactions,
+    dateRange?.fromDate,
+    dateRange?.toDate
+  );
   const expenseCategories = calculateCategorySummary(transactions, 'expense');
   const incomeCategories = calculateCategorySummary(transactions, 'income');
 
@@ -37,9 +68,7 @@ export const Charts: React.FC = () => {
           <p className="text-sm font-medium text-gray-900 mb-2">{`${label}`}</p>
           {payload.map((entry: any, index: number) => (
             <p key={index} className="text-sm" style={{ color: entry.color }}>
-              {`${entry.dataKey === 'income' ? t('charts.income') : 
-                 entry.dataKey === 'expenses' ? t('charts.expenses') : 
-                 t('charts.balance')}: €${entry.value.toFixed(2)}`}
+              {`${entry.dataKey === 'income' ? t('charts.income') : t('charts.expenses')}: €${entry.value.toFixed(2)}`}
             </p>
           ))}
         </div>
@@ -98,14 +127,6 @@ export const Charts: React.FC = () => {
                 strokeWidth={3}
                 dot={{ fill: '#EF4444', strokeWidth: 2, r: 4 }}
                 name={t('charts.expenses')}
-              />
-              <Line 
-                type="monotone" 
-                dataKey="balance" 
-                stroke="#3B82F6" 
-                strokeWidth={3}
-                dot={{ fill: '#3B82F6', strokeWidth: 2, r: 4 }}
-                name={t('charts.balance')}
               />
             </LineChart>
           </ResponsiveContainer>
@@ -168,6 +189,7 @@ export const Charts: React.FC = () => {
                     tick={{ fontSize: 12 }}
                     stroke="#6b7280"
                     tickFormatter={(value) => `€${value}`}
+                    domain={[0, 'auto']}
                   />
                   <YAxis 
                     type="category"
