@@ -9,6 +9,7 @@
  * - Generates unique IDs for transactions
  * - Returns both valid transactions and detailed errors
  * - Handles edge cases (empty lines, invalid data, etc.)
+ * - Accepts both English and Lithuanian type values for round-trip export/import
  */
 
 import { Transaction } from '../../types/Transaction';
@@ -35,6 +36,27 @@ export interface ParseResult {
     errorRows: number;
   };
 }
+
+/**
+ * Normalize localized type values to English
+ * Supports both English and Lithuanian for round-trip export/import
+ * 
+ * @param typeStr - Type value from CSV (case-insensitive)
+ * @returns 'income', 'expense', or null if invalid
+ */
+const normalizeType = (typeStr: string): 'income' | 'expense' | null => {
+  const normalized = typeStr.toLowerCase().trim();
+  
+  // English values
+  if (normalized === 'income') return 'income';
+  if (normalized === 'expense') return 'expense';
+  
+  // Lithuanian values (from CSV export)
+  if (normalized === 'pajamos') return 'income';
+  if (normalized === 'išlaidos') return 'expense';
+  
+  return null;
+};
 
 /**
  * Parse CSV file content into transactions
@@ -116,13 +138,13 @@ export const parseCSV = (csvText: string): ParseResult => {
     }
     
     // Validate type
-    const type = typeStr.toLowerCase();
-    if (type !== 'income' && type !== 'expense') {
+    const type = normalizeType(typeStr);
+    if (type === null) {
       errors.push({
         row: rowNumber,
         field: 'type',
         value: typeStr,
-        reason: 'Type must be "income" or "expense"'
+        reason: 'Type must be "income"/"expense" (English) or "Pajamos"/"Išlaidos" (Lithuanian)'
       });
       continue;
     }
@@ -153,7 +175,7 @@ export const parseCSV = (csvText: string): ParseResult => {
     // All validations passed - create transaction
     const transaction: Transaction = {
       id: generateUniqueId(),
-      type: type as 'income' | 'expense',
+      type: type,
       category,
       amount,
       description: description || '',

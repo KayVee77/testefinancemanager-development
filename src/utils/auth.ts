@@ -9,19 +9,19 @@ import { AuthError, StorageError } from '../errors/ApplicationError';
  * In production AWS deployment, this will be replaced with AWS Cognito.
  * 
  * To use dev auth, set environment variable:
- * VITE_DEV_ONLY_AUTH=true
+ * VITE_RUNTIME=local
  * 
- * When false or unset, this module will throw an error, forcing AWS Cognito integration.
+ * When set to 'aws' in production, this module will throw an error, forcing AWS Cognito integration.
  */
 
-// Check if dev auth is explicitly enabled
-const DEV_AUTH_ENABLED = import.meta.env.VITE_DEV_ONLY_AUTH === 'true';
+// Check if we're in local development mode
+const IS_LOCAL_MODE = import.meta.env.VITE_RUNTIME === 'local';
 
-if (!DEV_AUTH_ENABLED && import.meta.env.PROD) {
+if (!IS_LOCAL_MODE && import.meta.env.PROD) {
   throw new Error(
-    'DEV authentication is disabled. ' +
-    'For local development, set VITE_DEV_ONLY_AUTH=true. ' +
-    'For production, integrate AWS Cognito.'
+    'DEV authentication is disabled in production mode. ' +
+    'For local development, set VITE_RUNTIME=local. ' +
+    'For production, set VITE_RUNTIME=aws and integrate AWS Cognito.'
   );
 }
 
@@ -93,6 +93,12 @@ export const getStoredUsers = (): StoredUser[] => {
 
 export const saveUser = (userData: RegisterData): User => {
   const users = getStoredUsers();
+  
+  // Check email uniqueness
+  if (emailExists(userData.email)) {
+    throw new AuthError('El. paštas jau užregistruotas');
+  }
+  
   const salt = generateSalt();
   const newUser: StoredUser = {
     id: Date.now().toString(),
