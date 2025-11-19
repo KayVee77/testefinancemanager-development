@@ -8,6 +8,8 @@ import { translateCategoryName } from '../i18n';
 interface TransactionFormProps {
   categories: Category[];
   onAddTransaction: (transaction: Omit<Transaction, 'id' | 'createdAt'>) => void;
+  onUpdateTransaction?: (id: string, transaction: Partial<Transaction>) => void;
+  initialData?: Transaction | null;
   isOpen: boolean;
   onClose: () => void;
   onAddCategory: (category: Omit<Category, 'id'>) => void;
@@ -16,6 +18,8 @@ interface TransactionFormProps {
 export const TransactionForm: React.FC<TransactionFormProps> = ({
   categories,
   onAddTransaction,
+  onUpdateTransaction,
+  initialData,
   isOpen,
   onClose,
   onAddCategory
@@ -30,6 +34,24 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
   const [showNewCategory, setShowNewCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryColor, setNewCategoryColor] = useState('#3B82F6');
+
+  // Populate form when initialData changes (edit mode)
+  React.useEffect(() => {
+    if (initialData) {
+      setAmount(initialData.amount.toString());
+      setDescription(initialData.description);
+      setCategory(initialData.category);
+      setType(initialData.type);
+      setDate(new Date(initialData.date).toISOString().split('T')[0]);
+    } else {
+      // Reset form when opening in "add" mode
+      setAmount('');
+      setDescription('');
+      setCategory('');
+      setType('expense');
+      setDate(new Date().toISOString().split('T')[0]);
+    }
+  }, [initialData, isOpen]);
 
   const filteredCategories = categories.filter(cat => cat.type === type);
 
@@ -47,13 +69,21 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
       return;
     }
 
-    onAddTransaction({
+    const transactionData = {
       amount: parseFloat(amount),
       description: sanitizedDescription,
       category: sanitizedCategory,
       type,
       date: new Date(date)
-    });
+    };
+
+    if (initialData && onUpdateTransaction) {
+      // Update existing transaction
+      onUpdateTransaction(initialData.id, transactionData);
+    } else {
+      // Add new transaction
+      onAddTransaction(transactionData);
+    }
 
     // Reset form
     setAmount('');
@@ -84,7 +114,9 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
     <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center z-50">
       <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 w-full max-w-md mx-4">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t('transactions.addTransaction')}</h2>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+            {initialData ? t('transactions.editTransaction') : t('transactions.addTransaction')}
+          </h2>
           <button
             onClick={onClose}
             className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
@@ -235,7 +267,7 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
               type="submit"
               className="flex-1 py-2 px-4 bg-blue-600 dark:bg-blue-500 text-white rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 transition-colors"
             >
-              {t('transactions.addButton')}
+              {initialData ? t('transactions.updateButton') : t('transactions.addButton')}
             </button>
           </div>
         </form>

@@ -95,6 +95,7 @@ export const en = {
     typeIncome: 'Income',
     typeExpense: 'Expense',
     addButton: 'Add',
+    updateButton: 'Update',
     cancelButton: 'Cancel',
     newCategory: 'New',
     addCategory: 'Add Category',

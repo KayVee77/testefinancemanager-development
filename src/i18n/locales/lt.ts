@@ -95,6 +95,7 @@ export const lt = {
     typeIncome: 'Pajamos',
     typeExpense: 'Išlaidos',
     addButton: 'Pridėti',
+    updateButton: 'Atnaujinti',
     cancelButton: 'Atšaukti',
     newCategory: 'Nauja',
     addCategory: 'Pridėti kategoriją',
