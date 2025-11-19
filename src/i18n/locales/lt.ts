@@ -171,6 +171,25 @@ export const lt = {
     transactions: 'Transakcijos',
     charts: 'Grafikai',
     reports: 'Ataskaitos',
+    budgetOptimization: 'Biudžeto optimizavimas',
+  },
+
+  // Budget Optimization
+  budgetOptimization: {
+    title: 'Biudžeto optimizavimas',
+    description: 'Dirbtinis intelektas (DI) analizuoja jūsų finansinius duomenis ir pateikia personalizuotus pasiūlymus biudžeto optimizavimui bei taupymo galimybėms.',
+    generateButton: 'Sugeneruoti finansinę analizę su DI',
+    generating: 'Generuojama...',
+    analyzedPeriod: 'Analizuojamas laikotarpis',
+    notEnoughDataTitle: 'Nepakanka duomenų',
+    notEnoughDataMessage: 'Pasiūlymams sugeneruoti reikia bent 10 transakcijų per pastarąsias 7 dienas. Įveskite daugiau transakcijų ir pabandykite dar kartą.',
+    suggestionsTitle: 'DI pasiūlymai',
+    disclaimerTitle: 'Svarbu',
+    disclaimerText: 'Pasiūlymai yra rekomendacinio pobūdžio ir nėra individuali finansinė konsultacija. Visada apsvarstykite savo asmeninę situaciją prieš priimdami finansinius sprendimus.',
+    errorTitle: 'Klaida generuojant pasiūlymus',
+    errorGeneric: 'Nepavyko sugeneruoti pasiūlymų. Patikrinkite interneto ryšį arba pabandykite dar kartą vėliau.',
+    retry: 'Bandyti dar kartą',
+    poweredBy: 'Naudojamas GPT-4.1-mini modelis',
   },
 
   // Reports and Analytics

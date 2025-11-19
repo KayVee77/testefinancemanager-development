@@ -5,6 +5,7 @@ import { Dashboard } from './components/Dashboard';
 import { TransactionForm } from './components/TransactionForm';
 import { TransactionList } from './components/TransactionList';
 import { ReportsSection } from './components/Reports/ReportsSection';
+import { BudgetOptimization } from './components/BudgetOptimization';
 import { AuthForm } from './components/AuthForm';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Toaster } from './services/notificationService';
@@ -15,7 +16,7 @@ import { useTransactions } from './hooks/useTransactions';
 import { useTheme } from './contexts/ThemeContext';
 import { useLanguage } from './contexts/LanguageContext';
 import { useTranslation } from './hooks/useTranslation';
-import { Plus, List, BarChart3, Wallet, LogOut, User as UserIcon, Sun, Moon, Languages, FileText } from 'lucide-react';
+import { Plus, List, BarChart3, Wallet, LogOut, User as UserIcon, Sun, Moon, Languages, FileText, Sparkles } from 'lucide-react';
 
 /**
  * App Component - Main Application Entry Point
@@ -50,7 +51,7 @@ function App() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'reports'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'reports' | 'budget-optimization'>('dashboard');
 
   // Initialize auth on mount (checks localStorage or Cognito)
   useEffect(() => {
@@ -157,6 +158,8 @@ function App() {
         return <TransactionList categories={categories} onEdit={handleEditTransaction} />;
       case 'reports':
         return <ReportsSection />;
+      case 'budget-optimization':
+        return <BudgetOptimization />;
       default:
         return <Dashboard />;
     }
@@ -279,6 +282,17 @@ function App() {
             >
               <FileText className="h-5 w-5 mr-2" />
               {t('nav.reports')}
+            </button>
+            <button
+              onClick={() => setActiveTab('budget-optimization')}
+              className={`flex items-center px-6 py-3 rounded-lg transition-all flex-1 justify-center ${
+                activeTab === 'budget-optimization'
+                  ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-sm'
+                  : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-gray-700'
+              }`}
+            >
+              <Sparkles className="h-5 w-5 mr-2" />
+              {t('nav.budgetOptimization')}
             </button>
           </div>
         </div>
