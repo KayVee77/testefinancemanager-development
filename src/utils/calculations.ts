@@ -1,4 +1,3 @@
-import { Transaction, MonthlyData, CategorySummary } from '../types/Transaction';
 import { 
   format, 
   startOfMonth, 
@@ -9,6 +8,9 @@ import {
   subMonths, 
   differenceInDays 
 } from 'date-fns';
+import type { Locale } from 'date-fns';
+import { enUS } from 'date-fns/locale';
+import { Transaction, MonthlyData, CategorySummary } from '../types/Transaction';
 
 /**
  * Calculate time-series income, expenses, and balance data
@@ -26,7 +28,8 @@ import {
 export const calculateMonthlyData = (
   transactions: Transaction[],
   fromDate?: Date | null,
-  toDate?: Date | null
+  toDate?: Date | null,
+  locale: Locale = enUS
 ): MonthlyData[] => {
   let startDate: Date;
   let endDate: Date;
@@ -78,7 +81,7 @@ export const calculateMonthlyData = (
         .reduce((sum, t) => sum + t.amount, 0);
 
       return {
-        month: format(day, 'MMM dd'), // "Nov 15" format for days
+        month: format(day, 'MMM dd', { locale }), // "Nov 15" format for days
         income,
         expenses,
         balance: income - expenses
@@ -105,7 +108,7 @@ export const calculateMonthlyData = (
         .reduce((sum, t) => sum + t.amount, 0);
 
       return {
-        month: format(month, 'MMM yyyy'), // "Nov 2025" format for months
+        month: format(month, 'MMM yyyy', { locale }), // "Nov 2025" format for months
         income,
         expenses,
         balance: income - expenses

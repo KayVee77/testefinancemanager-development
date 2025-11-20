@@ -3,6 +3,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   PieChart, Pie, Cell, BarChart, Bar, ResponsiveContainer
 } from 'recharts';
+import { enUS, lt as ltLocale } from 'date-fns/locale';
 import { Transaction } from '../types/Transaction';
 import { useTransactions } from '../hooks/useTransactions';
 import { useTranslation } from '../hooks/useTranslation';
@@ -43,6 +44,7 @@ interface ChartsProps {
 export const Charts: React.FC<ChartsProps> = ({ transactions: transactionsProp, dateRange }) => {
   const { transactions: storeTransactions } = useTransactions();
   const { t, language } = useTranslation();
+  const locale = language === 'lt' ? ltLocale : enUS;
   
   // Use prop if provided, otherwise fall back to store (backward compatibility)
   const transactions = transactionsProp ?? storeTransactions;
@@ -50,7 +52,8 @@ export const Charts: React.FC<ChartsProps> = ({ transactions: transactionsProp, 
   const monthlyData = calculateMonthlyData(
     transactions,
     dateRange?.fromDate,
-    dateRange?.toDate
+    dateRange?.toDate,
+    locale
   );
   const expenseCategories = calculateCategorySummary(transactions, 'expense');
   const incomeCategories = calculateCategorySummary(transactions, 'income');
