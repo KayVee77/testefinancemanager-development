@@ -141,18 +141,22 @@ export const getStoredCategories = async (userId: string): Promise<Category[]> =
 export const saveCategories = async (userId: string, categories: Category[]): Promise<void> => {
   try {
     if (IS_AWS_MODE) {
-      // AWS: Save via API with userId in path (batch operation supported by server)
-      await httpClient.post(
-        getApiUrl(`/users/${userId}/categories`),
-        categories,
-        {
-          retry: {
-            maxRetries: 2,
-            backoff: 'exponential'
-          },
-          idempotent: true,
-          timeout: 10000
-        }
+      // AWS: Save each category individually to match server expectations
+      await Promise.all(
+        categories.map(category =>
+          httpClient.post(
+            getApiUrl(`/users/${userId}/categories`),
+            category,
+            {
+              retry: {
+                maxRetries: 2,
+                backoff: 'exponential'
+              },
+              idempotent: true,
+              timeout: 10000
+            }
+          )
+        )
       );
     } else {
       // LOCAL: Save to localStorage
