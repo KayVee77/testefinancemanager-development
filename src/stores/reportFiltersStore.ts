@@ -26,7 +26,7 @@ interface ReportFiltersState {
   setCategories: (categories: string[]) => void;
   toggleCategory: (category: string) => void;
   setTypes: (types: ('income' | 'expense')[]) => void;
-  toggleType: (type: 'income' | 'expense') => void;
+  toggleType: (type: 'income' | 'expense', transactions?: Array<{ category: string; type: 'income' | 'expense' }>) => void;
   resetFilters: () => void;
   applyQuickFilter: (filter: 'last7days' | 'last30days' | 'thisMonth' | 'lastMonth' | 'thisYear') => void;
   hasActiveFilters: () => boolean;
@@ -73,14 +73,35 @@ export const useReportFilters = create<ReportFiltersState>((set, get) => ({
     filters: { ...state.filters, selectedTypes: types }
   })),
 
-  toggleType: (type) => set(state => {
+  toggleType: (type, transactions) => set((state) => {
     const current = state.filters.selectedTypes;
-    const newTypes = current.includes(type)
+    const isTogglingOff = current.includes(type);
+    const newTypes = isTogglingOff
       ? current.filter(t => t !== type)
       : [...current, type];
     
+    // When toggling a type OFF, remove all categories of that type
+    let newCategories = state.filters.selectedCategories;
+    
+    if (isTogglingOff && transactions) {
+      // Build a set of categories that belong to the type being toggled off
+      const categoriesToRemove = new Set<string>();
+      transactions.forEach(t => {
+        if (t.type === type) {
+          categoriesToRemove.add(t.category);
+        }
+      });
+      
+      // Filter out categories of the toggled-off type
+      newCategories = newCategories.filter(cat => !categoriesToRemove.has(cat));
+    }
+    
     return {
-      filters: { ...state.filters, selectedTypes: newTypes as ('income' | 'expense')[]}
+      filters: { 
+        ...state.filters, 
+        selectedTypes: newTypes as ('income' | 'expense')[],
+        selectedCategories: newCategories
+      }
     };
   }),
 
