@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '../utils/test-utils';
-import userEvent from '@testing-library/user-event';
+import userEvent from '../utils/user-event';
 import { TransactionList } from './TransactionList';
 import { Transaction, Category } from '../types/Transaction';
 
