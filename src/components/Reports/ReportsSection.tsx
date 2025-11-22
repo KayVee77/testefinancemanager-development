@@ -62,6 +62,26 @@ export const ReportsSection: React.FC = () => {
     return result;
   }, [allTransactions, filters]);
 
+  // For Charts component: filter by date and category only, NOT by type
+  // Charts component handles type filtering internally for line chart only
+  const chartTransactions = React.useMemo(() => {
+    let result = allTransactions;
+
+    // Step 1: Apply date range filter
+    if (filters.fromDate || filters.toDate) {
+      result = getTransactionsInRange(result, filters.fromDate, filters.toDate);
+    }
+
+    // Step 2: Apply category filter
+    if (filters.selectedCategories.length > 0) {
+      result = filterTransactionsByCategories(result, filters.selectedCategories);
+    }
+
+    // NOTE: DO NOT apply type filter - pie charts must remain independent
+
+    return result;
+  }, [allTransactions, filters.fromDate, filters.toDate, filters.selectedCategories]);
+
   // Calculate KPIs from filtered transactions
   const totalIncome = getTotalIncome(filteredTransactions);
   const totalExpenses = getTotalExpenses(filteredTransactions);
@@ -234,7 +254,7 @@ export const ReportsSection: React.FC = () => {
 
           {/* Charts with Filtered Data */}
           <Charts 
-            transactions={filteredTransactions}
+            transactions={chartTransactions}
             dateRange={{
               fromDate: filters.fromDate,
               toDate: filters.toDate
