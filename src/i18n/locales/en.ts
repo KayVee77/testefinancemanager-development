@@ -88,6 +88,7 @@ export const en = {
     selectCategory: 'Select category',
     transactionAmount: 'Amount (€)',
     transactionDescription: 'Description',
+    amountInvalid: 'Invalid amount. Amount must be greater than 0.',
     transactionDescriptionPlaceholder: 'Transaction description',
     transactionCategory: 'Category',
     transactionDate: 'Date',
@@ -236,6 +237,19 @@ export const en = {
     addFirstTransaction: 'Add your first transaction',
     filteredTransactions: 'Filtered Transactions',
     showingTransactions: 'Showing {count} transactions',
+  },
+
+  // Validation messages
+  validation: {
+    required: 'This field is required.',
+    amountPositive: 'Amount must be greater than 0.',
+    amountInvalid: 'Enter a valid number.',
+    number: 'Enter a valid number.',
+    date: 'Enter a valid date.',
+    categoryRequired: 'Please select a category.',
+    descriptionRequired: 'Please enter a description.',
+    amountRequired: 'Amount is required.',
+    dateRequired: 'Date is required.',
   },
 
   // Categories (default)
