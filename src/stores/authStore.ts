@@ -19,7 +19,7 @@
 
 import { create } from 'zustand';
 import { User } from '../types/User';
-import { IS_AWS_MODE } from '../config/env';
+import { IS_AWS_MODE, USE_DEV_AUTH } from '../config/env';
 import { 
   getCurrentUser, 
   setCurrentUser as saveCurrentUser, 
@@ -63,11 +63,11 @@ export const useAuthStore = create<AuthState>((set) => ({
     });
     
     // Manual persistence based on environment
-    if (!IS_AWS_MODE && user) {
-      // LOCAL: Save to localStorage via utils/auth.ts
+    if (USE_DEV_AUTH && user) {
+      // DEV AUTH: Save to localStorage via utils/auth.ts
       saveCurrentUser(user);
     }
-    // AWS: Session managed by Cognito, no localStorage needed
+    // AWS COGNITO: Session managed by Cognito, no localStorage needed
   },
   
   /**
@@ -81,10 +81,10 @@ export const useAuthStore = create<AuthState>((set) => ({
     });
     
     // Clear session based on environment
-    if (!IS_AWS_MODE) {
+    if (USE_DEV_AUTH) {
       clearCurrentUser();
     }
-    // AWS: Handled by authService.logout() → Cognito
+    // AWS COGNITO: Handled by authService.logout() → Cognito
   },
   
   /**
@@ -96,19 +96,9 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true });
     
     try {
-      if (IS_AWS_MODE) {
-        // AWS: Check Cognito session via authService
-        // This will be implemented when AWS is deployed
-        // For now, just set to not authenticated
-        console.log('[Auth] AWS mode - Cognito session check not yet implemented');
-        set({ 
-          user: null, 
-          isAuthenticated: false, 
-          isLoading: false 
-        });
-      } else {
-        // LOCAL: Load from localStorage via utils/auth.ts
-        console.log('[Auth] LOCAL mode - loading from localStorage');
+      if (USE_DEV_AUTH) {
+        // DEV AUTH: Load from localStorage via utils/auth.ts
+        console.log('[Auth] DEV mode - loading from localStorage');
         const user = getCurrentUser();
         set({ 
           user, 
@@ -121,6 +111,16 @@ export const useAuthStore = create<AuthState>((set) => ({
         } else {
           console.log('[Auth] No user session found');
         }
+      } else {
+        // AWS COGNITO: Check Cognito session via authService
+        // This will be implemented when AWS is deployed
+        // For now, just set to not authenticated
+        console.log('[Auth] AWS Cognito mode - not yet implemented');
+        set({ 
+          user: null, 
+          isAuthenticated: false, 
+          isLoading: false 
+        });
       }
     } catch (error) {
       console.error('[Auth] Failed to initialize:', error);

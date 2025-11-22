@@ -2,9 +2,23 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import OpenAI from 'openai';
+import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { DynamoDBDocumentClient, PutCommand, QueryCommand, UpdateCommand, DeleteCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
 
 // Load environment variables
 dotenv.config();
+
+// Initialize DynamoDB Client (connects to DynamoDB Local in Docker)
+const dynamoClient = new DynamoDBClient({
+  endpoint: process.env.DYNAMODB_ENDPOINT || 'http://dynamodb-local:8000',
+  region: process.env.AWS_REGION || 'eu-north-1',
+  credentials: {
+    accessKeyId: 'local',
+    secretAccessKey: 'local'
+  }
+});
+
+const docClient = DynamoDBDocumentClient.from(dynamoClient);
 
 // Validate OpenAI API key
 if (!process.env.OPENAI_API_KEY) {
@@ -548,17 +562,229 @@ Give 3 quick wins the user can implement this week.`;
   return { systemPrompt, userPrompt };
 }
 
+// ============================================================================
+// DYNAMODB CRUD ROUTES - Transactions (REST-style URLs)
+// ============================================================================
+
+// GET /users/:userId/transactions - Get all transactions for user
+app.get('/users/:userId/transactions', async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    
+    const command = new QueryCommand({
+      TableName: 'Transactions',
+      KeyConditionExpression: 'userId = :userId',
+      ExpressionAttributeValues: {
+        ':userId': userId
+      }
+    });
+    
+    const result = await docClient.send(command);
+    
+    // Transform DynamoDB format to API DTO format
+    const transactions = (result.Items || []).map(item => ({
+      id: item.transactionId,
+      userId: item.userId,
+      postedAt: item.date,
+      amountMinor: Math.round((item.amount || 0) * 100), // Convert euros to cents
+      type: item.type,
+      category: item.category,
+      description: item.description,
+      createdAt: item.createdAt
+    }));
+    
+    res.json(transactions);
+  } catch (error) {
+    console.error('❌ Error fetching transactions:', error);
+    res.status(500).json({ error: 'Failed to fetch transactions' });
+  }
+});
+
+// POST /users/:userId/transactions - Create new transaction
+app.post('/users/:userId/transactions', async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const transaction = req.body;
+    
+    // Support both old format (amount) and new format (amountMinor)
+    const amount = transaction.amount || (transaction.amountMinor ? transaction.amountMinor / 100 : 0);
+    const date = transaction.date || transaction.postedAt;
+    
+    const command = new PutCommand({
+      TableName: 'Transactions',
+      Item: {
+        userId,
+        transactionId: transaction.id,
+        amount,
+        type: transaction.type,
+        category: transaction.category,
+        description: transaction.description,
+        date,
+        createdAt: transaction.createdAt || new Date().toISOString()
+      }
+    });
+    
+    await docClient.send(command);
+    
+    // Return in API format
+    res.json({ 
+      success: true, 
+      transaction: {
+        id: transaction.id,
+        userId,
+        postedAt: date,
+        amountMinor: Math.round(amount * 100),
+        type: transaction.type,
+        category: transaction.category,
+        description: transaction.description,
+        createdAt: transaction.createdAt || new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error creating transaction:', error);
+    res.status(500).json({ error: 'Failed to create transaction' });
+  }
+});
+
+// PUT /users/:userId/transactions/:id - Update transaction
+app.put('/users/:userId/transactions/:id', async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const transactionId = req.params.id;
+    const updates = req.body;
+    
+    const command = new UpdateCommand({
+      TableName: 'Transactions',
+      Key: {
+        userId,
+        transactionId
+      },
+      UpdateExpression: 'SET amount = :amount, #type = :type, category = :category, description = :description, #date = :date',
+      ExpressionAttributeNames: {
+        '#type': 'type',
+        '#date': 'date'
+      },
+      ExpressionAttributeValues: {
+        ':amount': updates.amount,
+        ':type': updates.type,
+        ':category': updates.category,
+        ':description': updates.description,
+        ':date': updates.date
+      }
+    });
+    
+    await docClient.send(command);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('❌ Error updating transaction:', error);
+    res.status(500).json({ error: 'Failed to update transaction' });
+  }
+});
+
+// DELETE /users/:userId/transactions/:id - Delete transaction
+app.delete('/users/:userId/transactions/:id', async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const transactionId = req.params.id;
+    
+    const command = new DeleteCommand({
+      TableName: 'Transactions',
+      Key: {
+        userId,
+        transactionId
+      }
+    });
+    
+    await docClient.send(command);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('❌ Error deleting transaction:', error);
+    res.status(500).json({ error: 'Failed to delete transaction' });
+  }
+});
+
+// ============================================================================
+// DYNAMODB CRUD ROUTES - Categories (REST-style URLs)
+// ============================================================================
+
+// GET /users/:userId/categories - Get all categories for user
+app.get('/users/:userId/categories', async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    
+    const command = new QueryCommand({
+      TableName: 'Categories',
+      KeyConditionExpression: 'userId = :userId',
+      ExpressionAttributeValues: {
+        ':userId': userId
+      }
+    });
+    
+    const result = await docClient.send(command);
+    
+    // Transform DynamoDB format to app format
+    const categories = (result.Items || []).map(item => ({
+      id: item.categoryId,
+      userId: item.userId,
+      name: item.name,
+      type: item.type,
+      color: item.color,
+      icon: item.icon || ''
+    }));
+    
+    res.json(categories);
+  } catch (error) {
+    console.error('❌ Error fetching categories:', error);
+    res.status(500).json({ error: 'Failed to fetch categories' });
+  }
+});
+
+// POST /users/:userId/categories - Create new category
+app.post('/users/:userId/categories', async (req, res) => {
+  try {
+    const userId = req.params.userId;
+    const category = req.body;
+    
+    const command = new PutCommand({
+      TableName: 'Categories',
+      Item: {
+        userId,
+        categoryId: category.id,
+        name: category.name,
+        type: category.type,
+        color: category.color,
+        icon: category.icon || ''
+      }
+    });
+    
+    await docClient.send(command);
+    res.json({ success: true, category });
+  } catch (error) {
+    console.error('❌ Error creating category:', error);
+    res.status(500).json({ error: 'Failed to create category' });
+  }
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log('');
-  console.log('🚀 FinanceFlow Dev API Server');
-  console.log(`📡 Listening on http://localhost:${PORT}`);
-  console.log(`🤖 OpenAI: ${process.env.OPENAI_API_KEY ? '✅ Configured' : '❌ Not configured'}`);
+  console.log('='.repeat(60));
+  console.log('🚀 FinanceFlow AI Dev Server + DynamoDB Local API');
+  console.log('='.repeat(60));
+  console.log(`✅ Server running on port ${PORT}`);
+  console.log(`✅ OpenAI: ${process.env.OPENAI_API_KEY ? 'Configured' : 'Not configured'}`);
+  console.log(`✅ DynamoDB: ${process.env.DYNAMODB_ENDPOINT || 'http://dynamodb-local:8000'}`);
   console.log('');
   console.log('Available endpoints:');
-  console.log(`   GET  http://localhost:${PORT}/health`);
-  console.log(`   POST http://localhost:${PORT}/api/ai/suggestions`);
-  console.log(`   POST http://localhost:${PORT}/api/ai/follow-up`);
+  console.log(`   GET    http://localhost:${PORT}/health`);
+  console.log(`   GET    http://localhost:${PORT}/users/:userId/transactions`);
+  console.log(`   POST   http://localhost:${PORT}/users/:userId/transactions`);
+  console.log(`   PUT    http://localhost:${PORT}/users/:userId/transactions/:id`);
+  console.log(`   DELETE http://localhost:${PORT}/users/:userId/transactions/:id`);
+  console.log(`   GET    http://localhost:${PORT}/users/:userId/categories`);
+  console.log(`   POST   http://localhost:${PORT}/users/:userId/categories`);
+  console.log(`   POST   http://localhost:${PORT}/api/ai/suggestions`);
+  console.log(`   POST   http://localhost:${PORT}/api/ai/follow-up`);
   console.log('');
   console.log('Press Ctrl+C to stop');
   console.log('');

@@ -88,7 +88,8 @@ export const transactionService = {
           apiData
         );
         notificationService.success('Transakcija pridėta');
-        return fromApiTransaction(response);
+        // Server returns { success: true, transaction: {...} }
+        return fromApiTransaction(response.transaction);
       } else {
         // LOCAL: Append to localStorage
         const transactions = await getStoredTransactions(userId);

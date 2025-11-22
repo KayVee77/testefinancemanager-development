@@ -23,6 +23,9 @@ export const getStoredTransactions = async (userId: string): Promise<Transaction
       const data = await httpClient.get<Transaction[]>(
         getApiUrl('/transactions'),
         {
+          headers: {
+            'x-user-id': userId
+          },
           retry: {
             maxRetries: 3,
             backoff: 'exponential'
@@ -61,19 +64,24 @@ export const getStoredTransactions = async (userId: string): Promise<Transaction
 export const saveTransactions = async (userId: string, transactions: Transaction[]): Promise<void> => {
   try {
     if (IS_AWS_MODE) {
-      // AWS: Save via API
-      await httpClient.post(
-        getApiUrl('/transactions'),
-        transactions,
-        {
-          retry: {
-            maxRetries: 2,
-            backoff: 'exponential'
-          },
-          idempotent: true,
-          timeout: 10000
-        }
-      );
+      // AWS: Save each transaction individually to DynamoDB
+      for (const transaction of transactions) {
+        await httpClient.post(
+          getApiUrl('/transactions'),
+          transaction,
+          {
+            headers: {
+              'x-user-id': userId
+            },
+            retry: {
+              maxRetries: 2,
+              backoff: 'exponential'
+            },
+            idempotent: true,
+            timeout: 10000
+          }
+        );
+      }
     } else {
       // LOCAL: Save to localStorage
       // Check storage quota before saving
@@ -116,9 +124,9 @@ export const saveTransactions = async (userId: string, transactions: Transaction
 export const getStoredCategories = async (userId: string): Promise<Category[]> => {
   try {
     if (IS_AWS_MODE) {
-      // AWS: Fetch from API
+      // AWS: Fetch from API with userId in path
       const data = await httpClient.get<Category[]>(
-        getApiUrl('/categories'),
+        getApiUrl(`/users/${userId}/categories`),
         {
           retry: {
             maxRetries: 3,
@@ -148,9 +156,9 @@ export const getStoredCategories = async (userId: string): Promise<Category[]> =
 export const saveCategories = async (userId: string, categories: Category[]): Promise<void> => {
   try {
     if (IS_AWS_MODE) {
-      // AWS: Save via API
+      // AWS: Save via API with userId in path
       await httpClient.post(
-        getApiUrl('/categories'),
+        getApiUrl(`/users/${userId}/categories`),
         categories,
         {
           retry: {
