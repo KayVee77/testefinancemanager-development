@@ -19,40 +19,51 @@ const openai = new OpenAI({
 });
 
 // System prompts for AI financial coach (multilingual)
+// Optimized for concise, demo-friendly responses
 const SYSTEM_PROMPTS = {
-  lt: `Tu esi draugiškas, šiuolaikiškas asmeninio biudžeto AI asistentas 🤖💰
+  lt: `Tu esi trumpas ir konkretus asmeninio biudžeto AI asistentas.
 
 Tavo stilius:
-- 🎯 Energingas, pozityvus, motyvuojantis
-- 💡 Naudok emoji punktuose (🎯 📊 💰 🚀 ⚡ 🌟 ✨ 💪 🔥 📈)
-- 🗣️ Šnekamoji, draugiška lietuvių kalba
-- 📋 Struktūruotas - naudok aiškius punktus su emoji
+- Trumpas ir aiškus - TIKTAI 3-5 patarimai
+- Kiekvienas patarimas 1-2 sakiniai, max 35-40 žodžių
+- Pradėk KIEKVIENĄ patarimą skaičiumi: "1. ", "2. ", "3. ", etc.
+- Naudok 1 emoji pradžioje kiekvieno patarimo
+- Šnekamoji, draugiška lietuvių kalba
+- BE įvado ar išvadų - TIK sąrašas
 
 Tavo užduotys:
-- Padaryk finansų analizę ĮDOMIĄ ir ĮKVEPIANT Ą
-- Pasiūlyk KONKREČIUS veiksmus su skaičiais
-- Pagirk tai, kas sekasi gerai! 🎉
-- Pasiūlyk realistiškas optimizacijas
-- Niekada neminėk asmeninių duomenų
+- Sugeneruok TIKTAI 3-5 konkrečius patarimus
+- Naudok tikrus skaičius (€, %, kategorijos)
+- Vienas patarimas = viena problema arba siūlymas
+- NIEKADA nekartok tos pačios idėjos
+- FORMATAS: Tik sunumeruotas sąrašas, jokių kitų paragrafų
 
-Tu nesi licencijuotas finansų patarėjas - tai edukaciniai pasiūlymai. 📚`,
+Pavyzdys:
+1. 💰 Pirmas patarimas čia (1-2 sakiniai su konkrečiais skaičiais)
+2. 🎯 Antras patarimas čia (kita tema, ne kartoti)
+3. 🔥 Trečias patarimas čia (vėl unikali idėja)`,
 
-  en: `You are a friendly, modern personal budget AI assistant 🤖💰
+  en: `You are a brief and concrete personal budget AI assistant.
 
 Your style:
-- 🎯 Energetic, positive, motivating
-- 💡 Use emojis in bullet points (🎯 📊 💰 🚀 ⚡ 🌟 ✨ 💪 🔥 📈)
-- 🗣️ Conversational, friendly English
-- 📋 Well-structured - use clear points with emojis
+- Short and clear - ONLY 3-5 suggestions
+- Each suggestion 1-2 sentences, max 35-40 words
+- Start EACH suggestion with number: "1. ", "2. ", "3. ", etc.
+- Use 1 emoji at start of each suggestion
+- Conversational, friendly English
+- NO intro or conclusions - JUST the list
 
 Your tasks:
-- Make financial analysis INTERESTING and INSPIRING
-- Suggest SPECIFIC actions with numbers
-- Praise what's going well! 🎉
-- Suggest realistic optimizations
-- Never mention personal data
+- Generate ONLY 3-5 concrete suggestions
+- Use real numbers (€, %, categories)
+- One suggestion = one problem or tip
+- NEVER repeat the same idea
+- FORMAT: Only numbered list, no other paragraphs
 
-You're not a licensed financial advisor - these are educational suggestions. 📚`
+Example:
+1. 💰 First tip here (1-2 sentences with specific numbers)
+2. 🎯 Second tip here (different topic, don't repeat)
+3. 🔥 Third tip here (unique idea again)`
 };
 
 const SYSTEM_PROMPT = SYSTEM_PROMPTS.lt;  // Default (will be dynamic)
@@ -115,11 +126,11 @@ app.post('/api/ai/suggestions', async (req, res) => {
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
       ],
-      temperature: 0.8,  // Increased for more creative/fun responses
-      max_tokens: 1000,  // Increased for more detailed responses
+      temperature: 0.7,  // Balanced for consistent, focused responses
+      max_tokens: 350,  // Reduced for brevity (3-5 short suggestions)
       top_p: 1,
-      frequency_penalty: 0.3,  // Reduce repetition
-      presence_penalty: 0.3,  // Encourage diverse topics
+      frequency_penalty: 0.5,  // Higher to reduce repetition
+      presence_penalty: 0.4,  // Encourage diverse topics
     });
 
     // Extract suggestions from response
@@ -174,88 +185,43 @@ function buildUserPrompt(summary, language) {
   const topCategory = expenseCategories[0];
   const topCategoryPercent = topCategory ? (topCategory.shareOfExpenses * 100).toFixed(1) : 0;
   
-  // Format categories with more details
+  // Format top 3 categories only (reduced for brevity)
   const categoriesText = expenseCategories
-    .slice(0, 6)  // Top 6 categories for better analysis
-    .map((cat, index) => {
-      const emoji = ['🍔', '🚗', '🎮', '🏥', '📱', '👕'][index] || '💰';
-      return `  ${emoji} ${cat.name}: ${cat.amount.toFixed(2)}${currency} (${(cat.shareOfExpenses * 100).toFixed(1)}%)`;
-    })
-    .join('\n');
+    .slice(0, 3)
+    .map((cat) => `${cat.name}: €${cat.amount.toFixed(0)} (${(cat.shareOfExpenses * 100).toFixed(0)}%)`)
+    .join(', ');
 
   if (language === 'en') {
-    return `📊 FINANCIAL SNAPSHOT
+    return `User financial summary:
 
-Period: ${period.from} to ${period.to}
-Currency: ${currency}
+Income: €${totalIncome.toFixed(2)}
+Expenses: €${totalExpenses.toFixed(2)}
+Balance: ${savingsOrDeficit >= 0 ? '+' : ''}€${savingsOrDeficit.toFixed(2)}
+Savings rate: ${savingsRate.toFixed(1)}%
+Top categories: ${categoriesText}
 
-💰 INCOME & EXPENSES:
-- Total income: €${totalIncome.toFixed(2)}
-- Total expenses: €${totalExpenses.toFixed(2)}
-- Net balance: ${savingsOrDeficit >= 0 ? '+' : ''}€${savingsOrDeficit.toFixed(2)} ${savingsOrDeficit >= 0 ? '✅ (saving!)' : '⚠️ (overspending)'}
-- Savings rate: ${savingsRate.toFixed(1)}% ${savingsRate >= 20 ? '🌟 Great!' : savingsRate >= 10 ? '👍 Good' : '⚡ Needs improvement'}
+Generate EXACTLY 3-5 short, actionable suggestions in numbered format:
+1. emoji Suggestion (1-2 sentences max, 35-40 words)
+2. emoji Suggestion (different topic)
+3. emoji Suggestion (another unique tip)
 
-📈 TOP SPENDING CATEGORIES:
-${categoriesText}
-${topCategory ? `\n🎯 Biggest category: ${topCategory.name} at ${topCategoryPercent}%` : ''}
-
-🚀 YOUR MISSION:
-Generate 5-7 AWESOME, ACTIONABLE tips to optimize this budget!
-
-CRITICAL FORMAT RULES:
-- Each tip MUST be on its OWN LINE
-- Start EVERY line with: "- emoji" (dash, space, emoji, space, text)
-- Example format:
-  - 💡 First tip here
-  - 🎯 Second tip here
-  - 🔥 Third tip here
-
-Content requirements:
-- Be specific with numbers when possible
-- Mix praise (what's good) with suggestions (what to improve)
-- Make it FUN and MOTIVATING
-- Keep each tip to 1-2 sentences max
-- Use conversational English
-- Use varied emojis: 💡 🎯 🔥 💪 ⚡ 🌟 ✨ 📊 💰 🚀 👍 🎉
-
-REMEMBER: ONE TIP PER LINE with "- emoji" format!`;
+Use real numbers from data. Be specific and practical.`;
   }
 
-  return `📊 FINANSINĖ APŽVALGA
+  return `Vartotojo finansinė suvestinė:
 
-Laikotarpis: ${period.from} – ${period.to}
-Valiuta: ${currency}
+Pajamos: €${totalIncome.toFixed(2)}
+Išlaidos: €${totalExpenses.toFixed(2)}
+Balansas: ${savingsOrDeficit >= 0 ? '+' : ''}€${savingsOrDeficit.toFixed(2)}
+Taupymo rodiklis: ${savingsRate.toFixed(1)}%
+Pagrindinės kategorijos: ${categoriesText}
 
-💰 PAJAMOS IR IŠLAIDOS:
-- Pajamos: €${totalIncome.toFixed(2)}
-- Išlaidos: €${totalExpenses.toFixed(2)}
-- Balansas: ${savingsOrDeficit >= 0 ? '+' : ''}€${savingsOrDeficit.toFixed(2)} ${savingsOrDeficit >= 0 ? '✅ (taupai!)' : '⚠️ (perviršis)'}
-- Taupymo rodiklis: ${savingsRate.toFixed(1)}% ${savingsRate >= 20 ? '🌟 Puiku!' : savingsRate >= 10 ? '👍 Gerai' : '⚡ Reikia tobulėti'}
+Sugeneruok TIKSLIAI 3-5 trumpus, praktiškus patarimus sunumeruotame sąraše:
+1. emoji Patarimas (1-2 sakiniai max, 35-40 žodžių)
+2. emoji Patarimas (kita tema)
+3. emoji Patarimas (dar vienas unikalus patarimas)
 
-📈 PAGRINDINĖS IŠLAIDŲ KATEGORIJOS:
-${categoriesText}
-${topCategory ? `\n🎯 Didžiausia kategorija: ${topCategory.name} - ${topCategoryPercent}%` : ''}
-
-🚀 TAVO MISIJA:
-Sugeneruok 5-7 NUOSTABIUS, PRAKTIŠKUS patarimus šiam biudžetui optimizuoti!
-
-KRITINIAI FORMATO REIKALAVIMAI:
-- Kiekvienas patarimas TURI būti ATSKIROJE EILUTĖJE
-- Pradėk KIEKVIENĄ eilutę: "- emoji" (brūkšnys, tarpas, emoji, tarpas, tekstas)
-- Pavyzdinis formatas:
-  - 💡 Pirmas patarimas čia
-  - 🎯 Antras patarimas čia
-  - 🔥 Trečias patarimas čia
-
-Turinio reikalavimai:
-- Būk konkretus su skaičiais, kur įmanoma
-- Sumaišyk pagyras (kas gerai) su pasiūlymais (ką gerinti)
-- Padaryk TAI SMAGIAI ir MOTYVUOJANČIAI
-- Kiekvienas patarimas 1-2 sakiniai max
-- Naudok šnekamą lietuvių kalbą
-- Naudok įvairius emoji: 💡 🎯 🔥 💪 ⚡ 🌟 ✨ 📊 💰 🚀 👍 🎉
-
-ATMINK: VIENAS PATARIMAS VIENOJE EILUTĖJE su "- emoji" formatu!`;
+Naudok tikrus skaičius iš duomenų. Būk konkretus ir praktiškas.`;
 }
 
 /**
@@ -313,42 +279,47 @@ function parseSuggestions(content) {
 // AI Follow-up endpoint (for interactive flashcards)
 app.post('/api/ai/follow-up', async (req, res) => {
   try {
-    const { followUpPrompt, originalSummary, initialSuggestions, language = 'lt' } = req.body;
+    const { followUpType, originalSummary, initialSuggestions, language = 'lt' } = req.body;
 
     // Validate request
-    if (!followUpPrompt || !originalSummary) {
+    if (!followUpType || !originalSummary) {
       return res.status(400).json({
         error: 'Bad Request',
-        message: 'Missing required fields: followUpPrompt, originalSummary'
+        message: 'Missing required fields: followUpType, originalSummary'
       });
     }
 
-    console.log('🔄 Generating follow-up response...');
-    console.log(`   Question: ${followUpPrompt.substring(0, 60)}...`);
+    // Validate followUpType
+    const validTypes = ['DETAIL', 'EXAMPLE', 'CHALLENGE', 'QUICK_ACTIONS'];
+    if (!validTypes.includes(followUpType)) {
+      return res.status(400).json({
+        error: 'Bad Request',
+        message: `Invalid followUpType. Must be one of: ${validTypes.join(', ')}`
+      });
+    }
+
+    console.log(`🔄 Generating ${followUpType} follow-up response...`);
     console.log(`   Language: ${language}`);
 
-    // Get system prompt for the selected language
-    const systemPrompt = SYSTEM_PROMPTS[language] || SYSTEM_PROMPTS.lt;
-
-    // Build context-aware user prompt for follow-up
-    const contextPrompt = buildFollowUpPrompt(
-      followUpPrompt, 
+    // Build mode-specific prompt
+    const { systemPrompt, userPrompt } = buildFollowUpPrompt(
+      followUpType,
       originalSummary, 
       initialSuggestions,
       language
     );
 
-    // Call OpenAI API with conversation context
+    // Call OpenAI API with mode-specific settings
     const response = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
       messages: [
         { role: 'system', content: systemPrompt },
-        { role: 'user', content: contextPrompt }
+        { role: 'user', content: userPrompt }
       ],
-      temperature: 0.8,
-      max_tokens: 800,  // Slightly shorter for follow-ups
+      temperature: 0.7,
+      max_tokens: 250,  // Reduced for brevity
       top_p: 1,
-      frequency_penalty: 0.3,
+      frequency_penalty: 0.4,
       presence_penalty: 0.3,
     });
 
@@ -388,64 +359,193 @@ app.post('/api/ai/follow-up', async (req, res) => {
 });
 
 /**
- * Build follow-up prompt with conversation context
+ * Build follow-up prompt with mode-specific instructions
+ * Returns { systemPrompt, userPrompt } for the specified mode
  */
-function buildFollowUpPrompt(followUpQuestion, originalSummary, initialSuggestions, language) {
-  const { totalIncome, totalExpenses, savingsOrDeficit } = originalSummary;
+function buildFollowUpPrompt(followUpType, originalSummary, initialSuggestions, language) {
+  const { totalIncome, totalExpenses, savingsOrDeficit, expenseCategories } = originalSummary;
   
-  // Format initial suggestions as context (first 5 only to save tokens)
+  // Format initial suggestions as context (first 5 only)
   const suggestionsContext = (initialSuggestions || [])
     .slice(0, 5)
     .map((s, i) => `${i + 1}. ${s}`)
     .join('\n');
 
-  if (language === 'en') {
-    return `CONTEXT FROM PREVIOUS ANALYSIS:
+  const isLT = language === 'lt';
+  
+  // Build style instruction for the language
+  const styleInstruction = isLT
+    ? 'Naudok šnekamą lietuvių kalbą. Būk konkretus, motyvuojantis ir praktiškas.'
+    : 'Use conversational English. Be specific, motivating and practical.';
 
-💰 Financial Summary:
-- Income: €${totalIncome.toFixed(2)}
-- Expenses: €${totalExpenses.toFixed(2)}
-- Balance: ${savingsOrDeficit >= 0 ? '+' : ''}€${savingsOrDeficit.toFixed(2)}
+  let systemPrompt = '';
+  let userPrompt = '';
 
-Previous suggestions:
+  // Mode-specific prompts
+  if (followUpType === 'DETAIL') {
+    // Explain previous suggestions in more depth
+    systemPrompt = isLT
+      ? `Tu tęsi trumpą finansinę coaching sesiją.
+
+${styleInstruction}
+
+Taisyklės:
+- Paaiškink ankstesnius pasiūlymus šiek tiek išsamiau
+- Grąžink daugiausiai 4 trumpus punktus
+- Kiekvienas punktas aprašo KODĖL pasiūlymas svarbus ir KAIP pradėti (1-2 sakiniai)
+- Nekartok pradinio sąrašo žodis į žodį
+- Max 150 žodžių iš viso`
+      : `You are continuing a short financial coaching session.
+
+${styleInstruction}
+
+Rules:
+- Explain the previous suggestions in a bit more depth
+- Return at most 4 short bullet points
+- Each bullet describes WHY a suggestion matters and HOW to start (1-2 sentences)
+- Do not restate the original list word-for-word
+- Max 150 words total`;
+
+    userPrompt = isLT
+      ? `Čia yra trumpi pasiūlymai, kuriuos jau davėi:
+
 ${suggestionsContext}
 
----
+Paaiškink pagrindines idėjas šiek tiek giliau, bet išlaikyk trumpą ir lengvai skaitomą formatą (per 30 sekundžių perskaitoma).`
+      : `Here are the short suggestions you already gave:
 
-USER'S FOLLOW-UP QUESTION:
-${followUpQuestion}
+${suggestionsContext}
 
-RESPONSE GUIDELINES:
-- Answer specifically and practically
-- Keep it concise (3-5 paragraphs max)
-- Use conversational English
-- Add emoji for engagement (but not too many)
-- Be motivating and supportive
-- Give actionable steps when relevant`;
-  }
+Explain the main ideas a bit deeper, but keep it concise and easy to read in under 30 seconds.`;
 
-  return `KONTEKSTAS IŠ ANKSTESNĖS ANALIZĖS:
+  } else if (followUpType === 'EXAMPLE') {
+    // Give one concrete example scenario
+    systemPrompt = isLT
+      ? `Tu esi finansinis treneris, teikiantis vieną konkretų pavyzdį.
 
-💰 Finansinė suvestinė:
-- Pajamos: €${totalIncome.toFixed(2)}
-- Išlaidos: €${totalExpenses.toFixed(2)}
-- Balansas: ${savingsOrDeficit >= 0 ? '+' : ''}€${savingsOrDeficit.toFixed(2)}
+${styleInstruction}
+
+Taisyklės:
+- Grąžink VIENĄ sunumeruotą 3-4 žingsnių sąrašą realistinam mėnesiui
+- Naudok konkrečius skaičius (€ ir %) pagal duomenis
+- Max 150 žodžių iš viso`
+      : `You are a financial coach giving a single concrete example scenario.
+
+${styleInstruction}
+
+Rules:
+- Return ONE numbered list of 3-4 steps for a realistic example month
+- Use specific numbers (€ and %) based on the data
+- Max 150 words total`;
+
+    userPrompt = isLT
+      ? `Čia vartotojo finansinė suvestinė ir tavo ankstesni pasiūlymai:
+
+Pajamos: €${totalIncome.toFixed(2)}
+Išlaidos: €${totalExpenses.toFixed(2)}
+Balansas: ${savingsOrDeficit >= 0 ? '+' : ''}€${savingsOrDeficit.toFixed(2)}
+
+Pasiūlymai:
+${suggestionsContext}
+
+Duok vieną realistį pavyzdį, kaip galėtų atrodyti tipinis mėnuo, jei vartotojas sektų tavo patarimus.`
+      : `Here is the user's financial summary and your previous suggestions:
+
+Income: €${totalIncome.toFixed(2)}
+Expenses: €${totalExpenses.toFixed(2)}
+Balance: ${savingsOrDeficit >= 0 ? '+' : ''}€${savingsOrDeficit.toFixed(2)}
+
+Suggestions:
+${suggestionsContext}
+
+Give one realistic example of how a typical month could look if the user followed your advice.`;
+
+  } else if (followUpType === 'CHALLENGE') {
+    // Create a savings challenge
+    systemPrompt = isLT
+      ? `Tu kuri smaugį taupymo iššūkį.
+
+${styleInstruction}
+
+Taisyklės:
+- Grąžink 7-14 dienų iššūkį
+- Naudok trumpą sunumeruotą kasdienių ar savaitinių užduočių sąrašą
+- Kiekvienas žingsnis turi būti labai konkretus (ką daryti, kiek sutaupyti ar sumažinti)
+- Max 8 punktai, max 150 žodžių`
+      : `You are creating a fun savings challenge.
+
+${styleInstruction}
+
+Rules:
+- Return a 7-14 day challenge
+- Use a short numbered list of daily or weekly tasks
+- Each step must be extremely concrete (what to do, how much to save or cut)
+- Max 8 bullets, max 150 words`;
+
+    userPrompt = isLT
+      ? `Pagal šią vartotojo situaciją ir pasiūlymus, sukurk trumpą taupymo iššūkį:
+
+Pajamos: €${totalIncome.toFixed(2)}
+Išlaidos: €${totalExpenses.toFixed(2)}
+Pagrindinės kategorijos: ${expenseCategories.slice(0, 2).map(c => c.name).join(', ')}
 
 Ankstesni pasiūlymai:
+${suggestionsContext}`
+      : `Based on this user's situation and the suggestions below, create a short savings challenge:
+
+Income: €${totalIncome.toFixed(2)}
+Expenses: €${totalExpenses.toFixed(2)}
+Top categories: ${expenseCategories.slice(0, 2).map(c => c.name).join(', ')}
+
+Previous suggestions:
+${suggestionsContext}`;
+
+  } else if (followUpType === 'QUICK_ACTIONS') {
+    // Give 3 quick wins for this week
+    systemPrompt = isLT
+      ? `Tu teiki greičiausius sprendimus, kuriuos vartotojas gali padaryti šią savaitę.
+
+${styleInstruction}
+
+Taisyklės:
+- Grąžink TIKSLIAI 3 greičius veiksmus artimiausiai 7 dienų
+- Kiekvienas veiksmas: vienas sakinys + pasirinktinė emoji
+- Fokusuokis į "padaryk dabar" žingsnius, ne ilgalaikį planavimą
+- Max 100 žodžių iš viso`
+      : `You are giving quick wins the user can do this week.
+
+${styleInstruction}
+
+Rules:
+- Return exactly 3 quick actions for the next 7 days
+- Each action: one sentence + optional emoji
+- Focus on "do it now" steps, not long-term planning
+- Max 100 words total`;
+
+    userPrompt = isLT
+      ? `Čia vartotojo suvestinė ir tavo ankstesni pasiūlymai:
+
+Pajamos: €${totalIncome.toFixed(2)}
+Išlaidos: €${totalExpenses.toFixed(2)}
+Pagrindinės kategorijos: ${expenseCategories.slice(0, 2).map(c => c.name).join(', ')}
+
+Pasiūlymai:
 ${suggestionsContext}
 
----
+Duok 3 greičiausius sprendimus, kuriuos vartotojas gali įgyvendinti šią savaitę.`
+      : `Here is the user's summary and your previous suggestions:
 
-VARTOTOJO KLAUSIMAS:
-${followUpQuestion}
+Income: €${totalIncome.toFixed(2)}
+Expenses: €${totalExpenses.toFixed(2)}
+Top categories: ${expenseCategories.slice(0, 2).map(c => c.name).join(', ')}
 
-ATSAKYMO GAIRĖS:
-- Atsakyk konkrečiai ir praktiškai
-- Laikykis trumpumo (3-5 pastraipos max)
-- Naudok šnekamą lietuvių kalbą
-- Pridėk emoji įtraukai (bet ne per daug)
-- Būk motyvuojantis ir palaikantis
-- Duok konkrečius veiksmus, kur tinka`;
+Suggestions:
+${suggestionsContext}
+
+Give 3 quick wins the user can implement this week.`;
+  }
+
+  return { systemPrompt, userPrompt };
 }
 
 // Start server

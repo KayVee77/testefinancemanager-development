@@ -192,6 +192,7 @@ export const en = {
     notEnoughDataTitle: 'Not enough data',
     notEnoughDataMessage: 'At least 10 transactions over the past 7 days are required to generate suggestions. Add more transactions and try again.',
     suggestionsTitle: 'AI Suggestions',
+    exportPdf: 'Export TXT',
     followUpTitle: 'Want to learn more? Select a question:',
     followUpResponseTitle: 'AI Response',
     askAnother: '← Ask another question',
