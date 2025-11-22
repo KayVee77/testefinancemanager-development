@@ -7,8 +7,10 @@ import { enUS, lt as ltLocale } from 'date-fns/locale';
 import { Transaction } from '../types/Transaction';
 import { useTransactions } from '../hooks/useTransactions';
 import { useTranslation } from '../hooks/useTranslation';
+import { useReportFilters } from '../stores/reportFiltersStore';
 import { translateCategoryName } from '../i18n';
 import { calculateMonthlyData, calculateCategorySummary } from '../utils/calculations';
+import { AlertCircle } from 'lucide-react';
 
 interface ChartsProps {
   /**
@@ -43,11 +45,17 @@ interface ChartsProps {
  */
 export const Charts: React.FC<ChartsProps> = ({ transactions: transactionsProp, dateRange }) => {
   const { transactions: storeTransactions } = useTransactions();
+  const { filters } = useReportFilters();
   const { t, language } = useTranslation();
   const locale = language === 'lt' ? ltLocale : enUS;
   
   // Use prop if provided, otherwise fall back to store (backward compatibility)
   const transactions = transactionsProp ?? storeTransactions;
+
+  // Check which types are enabled (for conditional line rendering)
+  const showIncome = filters.selectedTypes.includes('income');
+  const showExpenses = filters.selectedTypes.includes('expense');
+  const noTypesSelected = !showIncome && !showExpenses;
 
   const monthlyData = calculateMonthlyData(
     transactions,
@@ -99,41 +107,55 @@ export const Charts: React.FC<ChartsProps> = ({ transactions: transactionsProp, 
       {/* Monthly Trends */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-6">{t('charts.monthlyTrends')}</h3>
-        <div className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={monthlyData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis 
-                dataKey="month" 
-                tick={{ fontSize: 12 }}
-                stroke="#6b7280"
-              />
-              <YAxis 
-                tick={{ fontSize: 12 }}
-                stroke="#6b7280"
-                tickFormatter={(value) => `€${value}`}
-              />
-              <Tooltip content={<CustomTooltip />} />
-              <Legend />
-              <Line 
-                type="monotone" 
-                dataKey="income" 
-                stroke="#10B981" 
-                strokeWidth={3}
-                dot={{ fill: '#10B981', strokeWidth: 2, r: 4 }}
-                name={t('charts.income')}
-              />
-              <Line 
-                type="monotone" 
-                dataKey="expenses" 
-                stroke="#EF4444" 
-                strokeWidth={3}
-                dot={{ fill: '#EF4444', strokeWidth: 2, r: 4 }}
-                name={t('charts.expenses')}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
+        
+        {noTypesSelected ? (
+          // Empty state when both toggles are OFF
+          <div className="h-80 flex flex-col items-center justify-center text-gray-400">
+            <AlertCircle className="h-16 w-16 mb-4" />
+            <p className="text-sm font-medium">{t('charts.noDataSelected')}</p>
+            <p className="text-xs mt-1">{t('charts.enableTypeToSeeData')}</p>
+          </div>
+        ) : (
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={monthlyData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis 
+                  dataKey="month" 
+                  tick={{ fontSize: 12 }}
+                  stroke="#6b7280"
+                />
+                <YAxis 
+                  tick={{ fontSize: 12 }}
+                  stroke="#6b7280"
+                  tickFormatter={(value) => `€${value}`}
+                />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend />
+                {showIncome && (
+                  <Line 
+                    type="monotone" 
+                    dataKey="income" 
+                    stroke="#10B981" 
+                    strokeWidth={3}
+                    dot={{ fill: '#10B981', strokeWidth: 2, r: 4 }}
+                    name={t('charts.income')}
+                  />
+                )}
+                {showExpenses && (
+                  <Line 
+                    type="monotone" 
+                    dataKey="expenses" 
+                    stroke="#EF4444" 
+                    strokeWidth={3}
+                    dot={{ fill: '#EF4444', strokeWidth: 2, r: 4 }}
+                    name={t('charts.expenses')}
+                  />
+                )}
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

@@ -113,6 +113,8 @@ export const lt = {
     expenses: 'Išlaidos',
     balance: 'Balansas',
     noData: 'Nėra duomenų',
+    noDataSelected: 'Nepasirinktas joks duomenų tipas',
+    enableTypeToSeeData: 'Įjunkite pajamas arba išlaidas, kad pamatytumėte duomenis',
     expenseCategories: 'Išlaidų kategorijos',
     incomeCategories: 'Pajamų kategorijos',
   },

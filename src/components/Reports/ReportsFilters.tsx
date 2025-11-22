@@ -35,6 +35,17 @@ export const ReportsFilters: React.FC = () => {
     return Array.from(categorySet).sort();
   }, [transactions]);
 
+  // Create a map of category -> type for disabling logic
+  const categoryTypeMap = React.useMemo(() => {
+    const map = new Map<string, 'income' | 'expense'>();
+    transactions.forEach(t => {
+      if (!map.has(t.category)) {
+        map.set(t.category, t.type);
+      }
+    });
+    return map;
+  }, [transactions]);
+
   // Format date for input[type="date"]
   const formatDateForInput = (date: Date | null): string => {
     if (!date) return '';
@@ -148,7 +159,7 @@ export const ReportsFilters: React.FC = () => {
         </label>
         <div className="flex gap-3">
           <button
-            onClick={() => toggleType('income')}
+            onClick={() => toggleType('income', transactions)}
             className={`flex-1 px-4 py-2 text-sm font-medium rounded-lg border transition-all ${
               filters.selectedTypes.includes('income')
                 ? 'bg-green-50 dark:bg-green-900 text-green-700 dark:text-green-300 border-green-300 dark:border-green-700'
@@ -158,7 +169,7 @@ export const ReportsFilters: React.FC = () => {
             {t('transactions.typeIncome')}
           </button>
           <button
-            onClick={() => toggleType('expense')}
+            onClick={() => toggleType('expense', transactions)}
             className={`flex-1 px-4 py-2 text-sm font-medium rounded-lg border transition-all ${
               filters.selectedTypes.includes('expense')
                 ? 'bg-red-50 dark:bg-red-900 text-red-700 dark:text-red-300 border-red-300 dark:border-red-700'
@@ -182,22 +193,33 @@ export const ReportsFilters: React.FC = () => {
           <div className="grid grid-cols-2 md:grid-cols-3 gap-2 max-h-48 overflow-y-auto p-2 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
             {uniqueCategories.map(category => {
               const isSelected = filters.selectedCategories.includes(category);
+              const categoryType = categoryTypeMap.get(category);
+              const isTypeEnabled = categoryType ? filters.selectedTypes.includes(categoryType) : true;
+              const isDisabled = !isTypeEnabled;
+              
               return (
                 <label
                   key={category}
-                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
-                    isSelected
-                      ? 'bg-blue-50 dark:bg-blue-900 border-blue-300 dark:border-blue-700 border'
-                      : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 border hover:bg-gray-50 dark:hover:bg-gray-600'
+                  className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors ${
+                    isDisabled
+                      ? 'opacity-40 cursor-not-allowed bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-600 border'
+                      : isSelected
+                      ? 'bg-blue-50 dark:bg-blue-900 border-blue-300 dark:border-blue-700 border cursor-pointer'
+                      : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600 border hover:bg-gray-50 dark:hover:bg-gray-600 cursor-pointer'
                   }`}
                 >
                   <input
                     type="checkbox"
-                    checked={isSelected}
-                    onChange={() => toggleCategory(category)}
-                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    checked={isSelected && !isDisabled}
+                    onChange={() => !isDisabled && toggleCategory(category)}
+                    disabled={isDisabled}
+                    className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded disabled:opacity-50 disabled:cursor-not-allowed"
                   />
-                  <span className="text-sm text-gray-900 dark:text-white truncate">
+                  <span className={`text-sm truncate ${
+                    isDisabled 
+                      ? 'text-gray-400 dark:text-gray-600' 
+                      : 'text-gray-900 dark:text-white'
+                  }`}>
                     {translateCategoryName(category, language)}
                   </span>
                 </label>

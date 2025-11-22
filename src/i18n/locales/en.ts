@@ -113,6 +113,8 @@ export const en = {
     expenses: 'Expenses',
     balance: 'Balance',
     noData: 'No data available',
+    noDataSelected: 'No data type selected',
+    enableTypeToSeeData: 'Enable income or expenses to see data',
     expenseCategories: 'Expense Categories',
     incomeCategories: 'Income Categories',
   },
