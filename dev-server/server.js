@@ -607,8 +607,8 @@ app.post('/users/:userId/transactions', async (req, res) => {
     const transaction = req.body;
     
     // Support both old format (amount) and new format (amountMinor)
-    const amount = transaction.amount || (transaction.amountMinor ? transaction.amountMinor / 100 : 0);
-    const date = transaction.date || transaction.postedAt;
+    const amount = transaction.amount ?? (transaction.amountMinor ? transaction.amountMinor / 100 : 0);
+    const date = transaction.date ?? transaction.postedAt;
     
     const command = new PutCommand({
       TableName: 'Transactions',
@@ -653,6 +653,10 @@ app.put('/users/:userId/transactions/:id', async (req, res) => {
     const transactionId = req.params.id;
     const updates = req.body;
     
+    // Support both old format (amount, date) and new format (amountMinor, postedAt)
+    const amount = updates.amount ?? (updates.amountMinor ? updates.amountMinor / 100 : 0);
+    const date = updates.date ?? updates.postedAt;
+    
     const command = new UpdateCommand({
       TableName: 'Transactions',
       Key: {
@@ -665,16 +669,29 @@ app.put('/users/:userId/transactions/:id', async (req, res) => {
         '#date': 'date'
       },
       ExpressionAttributeValues: {
-        ':amount': updates.amount,
+        ':amount': amount,
         ':type': updates.type,
         ':category': updates.category,
         ':description': updates.description,
-        ':date': updates.date
+        ':date': date
       }
     });
     
     await docClient.send(command);
-    res.json({ success: true });
+    
+    // Return in API DTO format for consistency
+    res.json({ 
+      success: true,
+      transaction: {
+        id: transactionId,
+        userId,
+        postedAt: date,
+        amountMinor: Math.round(amount * 100),
+        type: updates.type,
+        category: updates.category,
+        description: updates.description
+      }
+    });
   } catch (error) {
     console.error('❌ Error updating transaction:', error);
     res.status(500).json({ error: 'Failed to update transaction' });

@@ -19,7 +19,7 @@
 
 import { create } from 'zustand';
 import { User } from '../types/User';
-import { IS_AWS_MODE, USE_DEV_AUTH } from '../config/env';
+import { USE_DEV_AUTH } from '../config/env';
 import { 
   getCurrentUser, 
   setCurrentUser as saveCurrentUser, 

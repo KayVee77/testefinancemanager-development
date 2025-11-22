@@ -19,13 +19,10 @@ const getStorageKey = (userId: string, key: string): string => {
 export const getStoredTransactions = async (userId: string): Promise<Transaction[]> => {
   try {
     if (IS_AWS_MODE) {
-      // AWS: Fetch from API
+      // AWS: Fetch from API (using REST URL pattern)
       const data = await httpClient.get<Transaction[]>(
-        getApiUrl('/transactions'),
+        getApiUrl(`/users/${userId}/transactions`),
         {
-          headers: {
-            'x-user-id': userId
-          },
           retry: {
             maxRetries: 3,
             backoff: 'exponential'
@@ -64,24 +61,12 @@ export const getStoredTransactions = async (userId: string): Promise<Transaction
 export const saveTransactions = async (userId: string, transactions: Transaction[]): Promise<void> => {
   try {
     if (IS_AWS_MODE) {
-      // AWS: Save each transaction individually to DynamoDB
-      for (const transaction of transactions) {
-        await httpClient.post(
-          getApiUrl('/transactions'),
-          transaction,
-          {
-            headers: {
-              'x-user-id': userId
-            },
-            retry: {
-              maxRetries: 2,
-              backoff: 'exponential'
-            },
-            idempotent: true,
-            timeout: 10000
-          }
-        );
-      }
+      // AWS: This path should not be used - transactionService handles AWS CRUD operations
+      // individually. This is here only as a fallback.
+      // In practice, use transactionService.create() for new transactions.
+      throw new StorageError(
+        'saveTransactions() should not be called in AWS mode. Use transactionService instead.'
+      );
     } else {
       // LOCAL: Save to localStorage
       // Check storage quota before saving
@@ -156,7 +141,7 @@ export const getStoredCategories = async (userId: string): Promise<Category[]> =
 export const saveCategories = async (userId: string, categories: Category[]): Promise<void> => {
   try {
     if (IS_AWS_MODE) {
-      // AWS: Save via API with userId in path
+      // AWS: Save via API with userId in path (batch operation supported by server)
       await httpClient.post(
         getApiUrl(`/users/${userId}/categories`),
         categories,

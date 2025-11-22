@@ -154,8 +154,20 @@ export const transactionService = {
 
     try {
       if (IS_AWS_MODE) {
-        // AWS: PUT to API Gateway
-        await http.put(`/users/${userId}/transactions/${id}`, updates);
+        // AWS: PUT to API Gateway with DTO format
+        // Convert partial Transaction to API format
+        const apiUpdates: any = {};
+        if (updates.amount !== undefined) apiUpdates.amountMinor = Math.round(updates.amount * 100);
+        if (updates.date !== undefined) {
+          apiUpdates.postedAt = updates.date instanceof Date 
+            ? updates.date.toISOString().split('T')[0] 
+            : updates.date;
+        }
+        if (updates.type !== undefined) apiUpdates.type = updates.type;
+        if (updates.category !== undefined) apiUpdates.category = updates.category;
+        if (updates.description !== undefined) apiUpdates.description = updates.description;
+        
+        await http.put(`/users/${userId}/transactions/${id}`, apiUpdates);
       } else {
         // LOCAL: Update in localStorage
         const transactions = await getStoredTransactions(userId);
