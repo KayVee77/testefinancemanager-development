@@ -118,6 +118,7 @@ export const en = {
     enableTypeToSeeData: 'Enable income or expenses to see data',
     expenseCategories: 'Expense Categories',
     incomeCategories: 'Income Categories',
+    noIncomeDataForPeriod: 'No income data for this period',
   },
 
   // Import/Export

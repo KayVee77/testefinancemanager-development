@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  PieChart, Pie, Cell, BarChart, Bar, ResponsiveContainer
+  PieChart, Pie, Cell, ResponsiveContainer
 } from 'recharts';
 import { enUS, lt as ltLocale } from 'date-fns/locale';
 import { Transaction } from '../types/Transaction';
@@ -50,28 +50,34 @@ export const Charts: React.FC<ChartsProps> = ({ transactions: transactionsProp, 
   const locale = language === 'lt' ? ltLocale : enUS;
   
   // Use prop if provided, otherwise fall back to store (backward compatibility)
-  const transactions = transactionsProp ?? storeTransactions;
+  const baseTransactions = transactionsProp ?? storeTransactions;
 
   // Check which types are enabled (for conditional line rendering)
   const showIncome = filters.selectedTypes.includes('income');
   const showExpenses = filters.selectedTypes.includes('expense');
   const noTypesSelected = !showIncome && !showExpenses;
 
+  // For line chart: apply type filter
+  const lineChartTransactions = React.useMemo(() => {
+    if (filters.selectedTypes.length === 0 || filters.selectedTypes.length === 2) {
+      return baseTransactions;
+    }
+    return baseTransactions.filter(t => filters.selectedTypes.includes(t.type));
+  }, [baseTransactions, filters.selectedTypes]);
+
   const monthlyData = calculateMonthlyData(
-    transactions,
+    lineChartTransactions,
     dateRange?.fromDate,
     dateRange?.toDate,
     locale
   );
-  const expenseCategories = calculateCategorySummary(transactions, 'expense');
-  const incomeCategories = calculateCategorySummary(transactions, 'income');
+
+  // For pie charts: NEVER apply type filter, only date/category filters
+  // Each pie chart naturally filters by its own type in calculateCategorySummary
+  const expenseCategories = calculateCategorySummary(baseTransactions, 'expense');
+  const incomeCategories = calculateCategorySummary(baseTransactions, 'income');
 
   // Translate category names for display
-  const translatedIncomeCategories = incomeCategories.map(cat => ({
-    ...cat,
-    category: translateCategoryName(cat.category, language)
-  }));
-
   const CustomTooltip = ({ active, payload, label }: any) => {
     if (active && payload && payload.length) {
       return (
@@ -202,38 +208,52 @@ export const Charts: React.FC<ChartsProps> = ({ transactions: transactionsProp, 
         )}
 
         {/* Income Categories */}
-        {incomeCategories.length > 0 && (
+        {incomeCategories.length > 0 ? (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
             <h3 className="text-lg font-semibold text-gray-900 mb-6">{t('charts.incomeCategories')}</h3>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={translatedIncomeCategories} layout="horizontal">
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis 
-                    type="number"
-                    tick={{ fontSize: 12 }}
-                    stroke="#6b7280"
-                    tickFormatter={(value) => `€${value}`}
-                    domain={[0, 'auto']}
-                  />
-                  <YAxis 
-                    type="category"
-                    dataKey="category"
-                    tick={{ fontSize: 12 }}
-                    stroke="#6b7280"
-                    width={80}
-                  />
-                  <Tooltip 
-                    formatter={(value: number) => [`€${value.toFixed(2)}`, 'Suma']}
-                    labelStyle={{ color: '#374151' }}
-                  />
-                  <Bar 
-                    dataKey="amount" 
-                    fill="#10B981"
-                    radius={[0, 4, 4, 0]}
-                  />
-                </BarChart>
+                <PieChart>
+                  <Pie
+                    data={incomeCategories}
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={80}
+                    dataKey="amount"
+                    stroke="#fff"
+                    strokeWidth={2}
+                  >
+                    {incomeCategories.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<PieTooltip />} />
+                </PieChart>
               </ResponsiveContainer>
+            </div>
+            <div className="mt-4">
+              <div className="grid grid-cols-2 gap-2">
+                {incomeCategories.slice(0, 6).map((category, index) => (
+                  <div key={index} className="flex items-center space-x-2">
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: category.color }}
+                    />
+                    <span className="text-sm text-gray-600 truncate">
+                      {translateCategoryName(category.category, language)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-6">{t('charts.incomeCategories')}</h3>
+            <div className="h-64 flex flex-col items-center justify-center text-gray-400">
+              <AlertCircle className="h-16 w-16 mb-4" />
+              <p className="text-sm font-medium">{t('charts.noData')}</p>
+              <p className="text-xs mt-1">{t('charts.noIncomeDataForPeriod')}</p>
             </div>
           </div>
         )}

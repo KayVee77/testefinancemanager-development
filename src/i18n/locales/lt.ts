@@ -118,6 +118,7 @@ export const lt = {
     enableTypeToSeeData: 'Įjunkite pajamas arba išlaidas, kad pamatytumėte duomenis',
     expenseCategories: 'Išlaidų kategorijos',
     incomeCategories: 'Pajamų kategorijos',
+    noIncomeDataForPeriod: 'Šiam laikotarpiui pajamų nėra',
   },
 
   // Import/Export
