@@ -192,6 +192,7 @@ export const lt = {
     notEnoughDataTitle: 'Nepakanka duomenų',
     notEnoughDataMessage: 'Pasiūlymams sugeneruoti reikia bent 10 transakcijų per pastarąsias 7 dienas. Įveskite daugiau transakcijų ir pabandykite dar kartą.',
     suggestionsTitle: 'DI pasiūlymai',
+    exportPdf: 'Eksportuoti TXT',
     followUpTitle: 'Norite sužinoti daugiau? Pasirinkite klausimą:',
     followUpResponseTitle: 'DI atsakymas',
     askAnother: '← Užduoti kitą klausimą',

@@ -192,13 +192,13 @@ export async function generateAISuggestions(
  * Generate follow-up response based on user's flashcard selection
  * Takes the original summary and initial suggestions as context
  * 
- * @param followUpPrompt - The user's selected follow-up question
+ * @param followUpType - The follow-up mode type (DETAIL, EXAMPLE, CHALLENGE, QUICK_ACTIONS)
  * @param originalSummary - The original budget summary for context
  * @param initialSuggestions - The initial AI suggestions for reference
  * @param language - Language for the response
  */
 export async function generateFollowUpResponse(
-  followUpPrompt: string,
+  followUpType: string,
   originalSummary: BudgetAiSummary,
   initialSuggestions: string[],
   language: 'lt' | 'en' = 'lt'
@@ -216,7 +216,7 @@ export async function generateFollowUpResponse(
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ 
-        followUpPrompt,
+        followUpType,
         originalSummary,
         initialSuggestions,
         language 
@@ -256,56 +256,40 @@ export async function generateFollowUpResponse(
 
 /**
  * Predefined follow-up prompts (flashcards) for interactive demo
- * These appear after initial suggestions are generated
+ * Reduced to 4 unique, distinct modes that align with backend implementation
  */
 export const FOLLOW_UP_PROMPTS: FollowUpPrompt[] = [
   {
-    id: 'explain-detail',
+    id: 'DETAIL',
     emoji: '🔍',
     labelLT: 'Paaiškink detaliau',
-    labelEN: 'Explain in more detail',
-    promptLT: 'Paaiškink vieną iš šių pasiūlymų detaliau su konkrečiais veiksmais, kuriuos galėčiau atlikti.',
-    promptEN: 'Explain one of these suggestions in more detail with specific steps I could take.',
+    labelEN: 'Explain in detail',
+    promptLT: 'Paaiškink vieną iš šių pasiūlymų detaliau su konkrečiais veiksmais.',
+    promptEN: 'Explain one of these suggestions in more detail with specific steps.',
   },
   {
-    id: 'give-example',
+    id: 'EXAMPLE',
     emoji: '💡',
     labelLT: 'Duok pavyzdį',
     labelEN: 'Give me an example',
-    promptLT: 'Duok konkretų pavyzdį, kaip galėčiau pritaikyti vieną iš šių pasiūlymų savo situacijoje.',
-    promptEN: 'Give me a concrete example of how I could apply one of these suggestions to my situation.',
+    promptLT: 'Duok konkretų pavyzdį, kaip galėčiau pritaikyti vieną iš šių pasiūlymų.',
+    promptEN: 'Give me a concrete example of how I could apply one of these suggestions.',
   },
   {
-    id: 'budget-improvement',
-    emoji: '🎯',
-    labelLT: 'Biudžeto tobulinimas',
-    labelEN: 'Suggest budget improvement',
-    promptLT: 'Pasiūlyk, kaip galėčiau dar labiau patobulinti savo biudžetą kitam mėnesiui.',
-    promptEN: 'Suggest how I could further improve my budget for next month.',
-  },
-  {
-    id: 'savings-challenge',
+    id: 'CHALLENGE',
     emoji: '🚀',
     labelLT: 'Taupymo iššūkis',
     labelEN: 'Savings challenge',
-    promptLT: 'Sukurk man 30 dienų taupymo iššūkį su konkrečiais tikslais.',
-    promptEN: 'Create a 30-day savings challenge for me with specific goals.',
+    promptLT: 'Sukurk man 7-14 dienų taupymo iššūkį su konkrečiais tikslais.',
+    promptEN: 'Create a 7-14 day savings challenge for me with specific goals.',
   },
   {
-    id: 'category-focus',
-    emoji: '📊',
-    labelLT: 'Kategorijos analizė',
-    labelEN: 'Category analysis',
-    promptLT: 'Paanalizuok mano didžiausią išlaidų kategoriją ir pasiūlyk, kaip ją optimizuoti.',
-    promptEN: 'Analyze my biggest expense category and suggest how to optimize it.',
-  },
-  {
-    id: 'quick-wins',
+    id: 'QUICK_ACTIONS',
     emoji: '⚡',
     labelLT: 'Greiti sprendimai',
     labelEN: 'Quick wins',
-    promptLT: 'Kokius greitus, paprastus pakeitimus galėčiau padaryti šią savaitę, kad sutaupyčiau pinigų?',
-    promptEN: 'What quick, simple changes could I make this week to save money?',
+    promptLT: 'Kokius greičius pakeitimus galėčiau padaryti šią savaitę?',
+    promptEN: 'What quick changes could I make this week to save money?',
   },
 ];
 
