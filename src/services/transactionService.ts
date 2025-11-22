@@ -67,6 +67,12 @@ export const transactionService = {
     userId: string,
     data: Omit<Transaction, 'id' | 'createdAt'>
   ): Promise<Transaction> {
+    // Validate amount
+    if (!data.amount || data.amount <= 0) {
+      notificationService.error('Neteisinga suma. Suma turi būti didesnė už 0.');
+      throw new Error('Invalid amount: must be greater than 0');
+    }
+
     const newTransaction: Transaction = {
       ...data,
       id: Date.now().toString(),
@@ -139,6 +145,12 @@ export const transactionService = {
    * @param updates - Partial transaction data
    */
   async update(userId: string, id: string, updates: Partial<Transaction>): Promise<void> {
+    // Validate amount if being updated
+    if (updates.amount !== undefined && updates.amount <= 0) {
+      notificationService.error('Neteisinga suma. Suma turi būti didesnė už 0.');
+      throw new Error('Invalid amount: must be greater than 0');
+    }
+
     try {
       if (IS_AWS_MODE) {
         // AWS: PUT to API Gateway

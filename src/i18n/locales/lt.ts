@@ -88,6 +88,7 @@ export const lt = {
     selectCategory: 'Pasirinkite kategoriją',
     transactionAmount: 'Suma (€)',
     transactionDescription: 'Aprašymas',
+    amountInvalid: 'Neteisinga suma. Suma turi būti didesnė už 0.',
     transactionDescriptionPlaceholder: 'Transakcijos aprašymas',
     transactionCategory: 'Kategorija',
     transactionDate: 'Data',
@@ -236,6 +237,19 @@ export const lt = {
     addFirstTransaction: 'Pridėkite pirmąją transakciją',
     filteredTransactions: 'Filtruotos transakcijos',
     showingTransactions: 'Rodoma transakcijų: {count}',
+  },
+
+  // Validation messages
+  validation: {
+    required: 'Šis laukas yra privalomas.',
+    amountPositive: 'Suma turi būti didesnė už 0.',
+    amountInvalid: 'Įveskite teisingą skaičių.',
+    number: 'Įveskite teisingą skaičių.',
+    date: 'Įveskite teisingą datą.',
+    categoryRequired: 'Pasirinkite kategoriją.',
+    descriptionRequired: 'Įveskite aprašymą.',
+    amountRequired: 'Suma yra privaloma.',
+    dateRequired: 'Data yra privaloma.',
   },
 
   // Categories (default)

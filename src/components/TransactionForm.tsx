@@ -34,6 +34,10 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
   const [showNewCategory, setShowNewCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryColor, setNewCategoryColor] = useState('#3B82F6');
+  const [amountError, setAmountError] = useState('');
+  const [descriptionError, setDescriptionError] = useState('');
+  const [categoryError, setCategoryError] = useState('');
+  const [dateError, setDateError] = useState('');
 
   // Populate form when initialData changes (edit mode)
   React.useEffect(() => {
@@ -51,6 +55,11 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
       setType('expense');
       setDate(new Date().toISOString().split('T')[0]);
     }
+    // Clear all validation errors
+    setAmountError('');
+    setDescriptionError('');
+    setCategoryError('');
+    setDateError('');
   }, [initialData, isOpen]);
 
   const filteredCategories = categories.filter(cat => cat.type === type);
@@ -58,7 +67,54 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!amount || !description || !category) return;
+    // Clear previous errors
+    let hasErrors = false;
+
+    // Validate amount
+    if (!amount || amount.trim() === '') {
+      setAmountError(t('validation.amountRequired'));
+      hasErrors = true;
+    } else {
+      const parsedAmount = parseFloat(amount);
+      if (isNaN(parsedAmount)) {
+        setAmountError(t('validation.amountInvalid'));
+        hasErrors = true;
+      } else if (parsedAmount <= 0) {
+        setAmountError(t('validation.amountPositive'));
+        hasErrors = true;
+      } else {
+        setAmountError('');
+      }
+    }
+
+    // Validate description
+    if (!description || description.trim() === '') {
+      setDescriptionError(t('validation.descriptionRequired'));
+      hasErrors = true;
+    } else {
+      setDescriptionError('');
+    }
+
+    // Validate category
+    if (!category || category.trim() === '') {
+      setCategoryError(t('validation.categoryRequired'));
+      hasErrors = true;
+    } else {
+      setCategoryError('');
+    }
+
+    // Validate date
+    if (!date || date.trim() === '') {
+      setDateError(t('validation.dateRequired'));
+      hasErrors = true;
+    } else {
+      setDateError('');
+    }
+
+    // Stop if there are validation errors
+    if (hasErrors) {
+      return;
+    }
 
     // Sanitize inputs before processing
     const sanitizedDescription = sanitizeAndTrim(description);
@@ -90,6 +146,10 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
     setDescription('');
     setCategory('');
     setDate(new Date().toISOString().split('T')[0]);
+    setAmountError('');
+    setDescriptionError('');
+    setCategoryError('');
+    setDateError('');
     onClose();
   };
 
@@ -164,11 +224,22 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
               type="number"
               step="0.01"
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              onChange={(e) => {
+                setAmount(e.target.value);
+                if (amountError) setAmountError('');
+              }}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                amountError
+                  ? 'border-red-500 dark:border-red-400 bg-red-50 dark:bg-red-900/20'
+                  : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700'
+              } text-gray-900 dark:text-white`}
               placeholder="0.00"
-              required
             />
+            {amountError && (
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                {amountError}
+              </p>
+            )}
           </div>
 
           <div>
@@ -178,11 +249,22 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
             <input
               type="text"
               value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              onChange={(e) => {
+                setDescription(e.target.value);
+                if (descriptionError) setDescriptionError('');
+              }}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                descriptionError
+                  ? 'border-red-500 dark:border-red-400 bg-red-50 dark:bg-red-900/20'
+                  : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700'
+              } text-gray-900 dark:text-white`}
               placeholder={t('transactions.transactionDescriptionPlaceholder')}
-              required
             />
+            {descriptionError && (
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                {descriptionError}
+              </p>
+            )}
           </div>
 
           <div>
@@ -229,9 +311,15 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
             
             <select
               value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
+              onChange={(e) => {
+                setCategory(e.target.value);
+                if (categoryError) setCategoryError('');
+              }}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                categoryError
+                  ? 'border-red-500 dark:border-red-400 bg-red-50 dark:bg-red-900/20'
+                  : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700'
+              } text-gray-900 dark:text-white`}
             >
               <option value="">{t('transactions.selectCategory')}</option>
               {filteredCategories.map((cat) => (
@@ -240,6 +328,11 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                 </option>
               ))}
             </select>
+            {categoryError && (
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                {categoryError}
+              </p>
+            )}
           </div>
 
           <div>
@@ -249,10 +342,21 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
             <input
               type="date"
               value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
+              onChange={(e) => {
+                setDate(e.target.value);
+                if (dateError) setDateError('');
+              }}
+              className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                dateError
+                  ? 'border-red-500 dark:border-red-400 bg-red-50 dark:bg-red-900/20'
+                  : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700'
+              } text-gray-900 dark:text-white`}
             />
+            {dateError && (
+              <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                {dateError}
+              </p>
+            )}
           </div>
 
           <div className="flex gap-3 pt-4">
