@@ -14,6 +14,7 @@ interface ValidationErrors {
   name?: string;
   email?: string;
   password?: string;
+  confirmPassword?: string;
 }
 
 export const AuthForm: React.FC<AuthFormProps> = ({ onLogin, onRegister }) => {
@@ -22,6 +23,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onLogin, onRegister }) => {
   
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({});
@@ -30,7 +32,8 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onLogin, onRegister }) => {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    password: ''
+    password: '',
+    confirmPassword: ''
   });
 
   const validateField = (field: string, value: string): string | undefined => {
@@ -54,6 +57,16 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onLogin, onRegister }) => {
         }
         if (!validatePassword(value)) {
           return t('auth.passwordTooShort');
+        }
+        break;
+      case 'confirmPassword':
+        if (!isLogin) {
+          if (!value) {
+            return t('auth.confirmPasswordRequired');
+          }
+          if (value !== formData.password) {
+            return t('auth.passwordsDoNotMatch');
+          }
         }
         break;
     }
@@ -89,7 +102,8 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onLogin, onRegister }) => {
     setTouchedFields({
       name: true,
       email: true,
-      password: true
+      password: true,
+      confirmPassword: true
     });
 
     // Validate all fields
@@ -98,6 +112,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onLogin, onRegister }) => {
     errors.password = validateField('password', formData.password);
     if (!isLogin) {
       errors.name = validateField('name', formData.name);
+      errors.confirmPassword = validateField('confirmPassword', formData.confirmPassword);
     }
 
     // Check if there are any validation errors
@@ -268,6 +283,39 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onLogin, onRegister }) => {
               )}
             </div>
 
+            {!isLogin && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  {t('auth.confirmPassword')}
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={formData.confirmPassword}
+                    onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                    onBlur={() => handleBlur('confirmPassword')}
+                    className={`w-full pl-10 pr-12 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
+                      touchedFields.confirmPassword && validationErrors.confirmPassword
+                        ? 'border-red-500 focus:ring-red-500'
+                        : 'border-gray-300'
+                    }`}
+                    placeholder={t('auth.confirmPasswordPlaceholder')}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                  </button>
+                </div>
+                {touchedFields.confirmPassword && validationErrors.confirmPassword && (
+                  <p className="mt-1.5 text-sm text-red-600">{validationErrors.confirmPassword}</p>
+                )}
+              </div>
+            )}
+
             {error && (
               <div className="bg-red-50 border border-red-200 rounded-lg p-3">
                 <p className="text-sm text-red-600">{error}</p>
@@ -297,7 +345,7 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onLogin, onRegister }) => {
                 setError('');
                 setValidationErrors({});
                 setTouchedFields({});
-                setFormData({ name: '', email: '', password: '' });
+                setFormData({ name: '', email: '', password: '', confirmPassword: '' });
               }}
               className="text-blue-600 hover:text-blue-800 text-sm font-medium transition-colors"
             >
