@@ -43,7 +43,7 @@ interface RequestMetadata {
  * Most components won't use this directly - use the simple API below instead.
  */
 class HttpClient {
-  private pendingRequests = new Map<string, Promise<Response>>();
+  private pendingRequests = new Map<string, Promise<any>>();
   private idempotencyKeys = new Map<string, string>();
   
   /**
@@ -79,15 +79,18 @@ class HttpClient {
       const cacheKey = `${url}:${JSON.stringify(fetchConfig)}`;
       const pending = this.pendingRequests.get(cacheKey);
       if (pending) {
-        return (await pending).clone().json();
+        // Return the already-parsed JSON promise
+        return await pending;
       }
       
-      const promise = this.executeRequest(url, fetchConfig, metadata, idempotent);
+      // Create promise that resolves to parsed JSON
+      const promise = this.executeRequest(url, fetchConfig, metadata, idempotent)
+        .then(response => response.json());
+      
       this.pendingRequests.set(cacheKey, promise);
       
       try {
-        const response = await promise;
-        return await response.json();
+        return await promise;
       } finally {
         this.pendingRequests.delete(cacheKey);
       }

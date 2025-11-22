@@ -6,14 +6,20 @@
  * - See: https://vitejs.dev/guide/env-and-mode.html
  * 
  * Environment Modes:
- * - LOCAL TEST: VITE_DEV_ONLY_AUTH=true (localStorage, no AWS)
- * - PROD AWS: VITE_DEV_ONLY_AUTH=false (Cognito, API Gateway, DynamoDB)
+ * - LOCAL TEST: VITE_DEV_ONLY_AUTH=true, VITE_USE_DYNAMODB=false (localStorage, dev auth)
+ * - DOCKER LOCAL: VITE_DEV_ONLY_AUTH=true, VITE_USE_DYNAMODB=true (DynamoDB Local, dev auth)
+ * - PROD AWS: VITE_DEV_ONLY_AUTH=false (Cognito, DynamoDB)
  */
 
 /**
- * Current runtime environment
+ * Use dev auth (true) or AWS Cognito (false)
  */
-export const IS_AWS_MODE = import.meta.env.VITE_DEV_ONLY_AUTH === 'false';
+export const USE_DEV_AUTH = import.meta.env.VITE_DEV_ONLY_AUTH !== 'false';
+
+/**
+ * Use AWS storage (DynamoDB) instead of localStorage
+ */
+export const IS_AWS_MODE = import.meta.env.VITE_USE_DYNAMODB === 'true' || import.meta.env.VITE_DEV_ONLY_AUTH === 'false';
 
 /**
  * Development mode check (Vite idiom)
@@ -55,7 +61,8 @@ export const getApiUrl = (path: string): string => {
  * Validate required environment variables
  */
 export const validateEnvironment = (): void => {
-  if (IS_AWS_MODE) {
+  if (IS_AWS_MODE && !USE_DEV_AUTH) {
+    // Only validate Cognito when using AWS Cognito (not dev auth)
     const required = [
       'VITE_API_GATEWAY_URL',
       'VITE_AWS_COGNITO_USER_POOL_ID',
@@ -67,6 +74,14 @@ export const validateEnvironment = (): void => {
     if (missing.length > 0) {
       throw new Error(
         `Missing required environment variables for AWS mode: ${missing.join(', ')}\n` +
+        `Please check your .env file.`
+      );
+    }
+  } else if (IS_AWS_MODE && USE_DEV_AUTH) {
+    // Dev auth + DynamoDB: only need API URL
+    if (!import.meta.env.VITE_API_GATEWAY_URL) {
+      throw new Error(
+        `Missing VITE_API_GATEWAY_URL for DynamoDB mode.\n` +
         `Please check your .env file.`
       );
     }
