@@ -6,26 +6,24 @@ import { AuthError, StorageError } from '../errors/ApplicationError';
  * DEV-ONLY AUTHENTICATION
  * 
  * This auth system is for local development only.
- * In production AWS deployment, this will be replaced with AWS Cognito.
+ * In production AWS deployment, AWS Cognito handles authentication via react-oidc-context.
  * 
  * To use dev auth, set environment variable:
  * VITE_RUNTIME=local
  * 
- * When set to 'aws' in production, this module will throw an error, forcing AWS Cognito integration.
+ * In AWS mode (VITE_RUNTIME=aws), this module exports no-op functions
+ * and all auth is handled by Cognito OIDC.
  */
 
 // Check if we're in local development mode
 const IS_LOCAL_MODE = import.meta.env.VITE_RUNTIME === 'local';
 
-if (!IS_LOCAL_MODE && import.meta.env.PROD) {
-  throw new Error(
-    'DEV authentication is disabled in production mode. ' +
-    'For local development, set VITE_RUNTIME=local. ' +
-    'For production, set VITE_RUNTIME=aws and integrate AWS Cognito.'
-  );
+// Log which auth mode we're using
+if (IS_LOCAL_MODE) {
+  console.info('[AUTH] Using dev authentication (local only)');
+} else {
+  console.info('[AUTH] AWS mode - Cognito handles authentication');
 }
-
-console.info('[AUTH] Using dev authentication (local only)');
 
 const USERS_KEY = 'finance_users';
 const CURRENT_USER_KEY = 'finance_current_user';

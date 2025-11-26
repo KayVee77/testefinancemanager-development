@@ -1,0 +1,72 @@
+# Docker Compose for Unified Container (Frontend + Backend in one)
+# Usage: docker-compose -f docker-compose.unified.yml up --build
+# App: http://localhost:8080
+#
+# This simulates the AWS production deployment locally
+
+services:
+  # Unified app (React frontend + Express backend)
+  financeflow:
+    build:
+      context: .
+      dockerfile: Dockerfile.unified
+      args:
+        # Use local dev auth for testing (no Cognito needed)
+        VITE_DEV_ONLY_AUTH: "true"
+        VITE_USE_DYNAMODB: "true"
+        VITE_RUNTIME: "local"
+        VITE_ENVIRONMENT: "docker-unified"
+        VITE_AWS_REGION: "eu-central-1"
+        VITE_API_BASE_URL: "/api"
+        # These are only used when VITE_DEV_ONLY_AUTH=false
+        # VITE_AWS_COGNITO_USER_POOL_ID: "eu-central-1_kaKX5BNfr"
+        # VITE_AWS_COGNITO_CLIENT_ID: "63k0okn09vas104vcjb71vhgd7"
+    container_name: financeflow-unified
+    ports:
+      - "8080:80"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      # DynamoDB Local connection
+      - DYNAMODB_ENDPOINT=http://dynamodb-local:8000
+      - AWS_ACCESS_KEY_ID=fakeAccessKeyId
+      - AWS_SECRET_ACCESS_KEY=fakeSecretAccessKey
+      - AWS_REGION=eu-central-1
+    depends_on:
+      dynamodb-local:
+        condition: service_healthy
+    networks:
+      - financeflow-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
+
+  # DynamoDB Local for development (persistent file mode)
+  dynamodb-local:
+    image: amazon/dynamodb-local:latest
+    container_name: dynamodb-local-unified
+    hostname: dynamodb-local
+    user: root
+    ports:
+      - "8000:8000"
+    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath /home/dynamodblocal/data"
+    volumes:
+      - dynamodb-data:/home/dynamodblocal/data
+    networks:
+      - financeflow-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s http://localhost:8000 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+networks:
+  financeflow-network:
+    driver: bridge
+
+volumes:
+  dynamodb-data:

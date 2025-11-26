@@ -7,6 +7,7 @@ import { TransactionList } from './components/TransactionList';
 import { ReportsSection } from './components/Reports/ReportsSection';
 import { BudgetOptimization } from './components/BudgetOptimization';
 import { AuthForm } from './components/AuthForm';
+import { AuthCallback } from './components/AuthCallback';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { Toaster } from './services/notificationService';
 import { notificationService } from './services/notificationService';
@@ -16,6 +17,7 @@ import { useTransactions } from './hooks/useTransactions';
 import { useTheme } from './contexts/ThemeContext';
 import { useLanguage } from './contexts/LanguageContext';
 import { useTranslation } from './hooks/useTranslation';
+import { IS_AWS_MODE } from './config/env';
 import { Plus, List, BarChart3, Wallet, LogOut, User as UserIcon, Sun, Moon, Languages, FileText, Sparkles } from 'lucide-react';
 
 /**
@@ -32,8 +34,20 @@ import { Plus, List, BarChart3, Wallet, LogOut, User as UserIcon, Sun, Moon, Lan
  * - UI state (tabs, modals)
  * - Categories (simple array, stays in component state for now)
  * - Layout and routing
+ * 
+ * ✨ UPDATED for AWS Cognito:
+ * - Handles /callback route for OAuth redirect
+ * - Works with both LOCAL and AWS auth modes
  */
 function App() {
+  // Check if this is the OAuth callback route
+  const isCallbackRoute = window.location.pathname === '/callback';
+  
+  // If on callback route in AWS mode, render callback handler
+  if (isCallbackRoute && IS_AWS_MODE) {
+    return <AuthCallback />;
+  }
+
   // Theme from context
   const { theme, toggleTheme } = useTheme();
   
