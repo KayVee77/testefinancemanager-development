@@ -1,26 +1,26 @@
 import { User } from '../types/User';
 import CryptoJS from 'crypto-js';
 import { AuthError, StorageError } from '../errors/ApplicationError';
+import { APP_ENV, USE_DEV_AUTH } from '../config/env';
 
 /**
  * DEV-ONLY AUTHENTICATION
  * 
- * This auth system is for local development only.
+ * This auth system is for local/docker development only.
  * In production AWS deployment, AWS Cognito handles authentication via react-oidc-context.
  * 
- * To use dev auth, set environment variable:
- * VITE_RUNTIME=local
- * 
- * In AWS mode (VITE_RUNTIME=aws), this module exports no-op functions
- * and all auth is handled by Cognito OIDC.
+ * Environment modes:
+ * - local: Uses dev auth (localStorage)
+ * - docker: Uses dev auth (but storage in DynamoDB)
+ * - production: Cognito handles auth (this module is no-op)
  */
 
-// Check if we're in local development mode
-const IS_LOCAL_MODE = import.meta.env.VITE_RUNTIME === 'local';
+// Check if we're in a mode that uses dev auth
+const IS_LOCAL_MODE = USE_DEV_AUTH;
 
 // Log which auth mode we're using
 if (IS_LOCAL_MODE) {
-  console.info('[AUTH] Using dev authentication (local only)');
+  console.info(`[AUTH] Using dev authentication (APP_ENV=${APP_ENV})`);
 } else {
   console.info('[AUTH] AWS mode - Cognito handles authentication');
 }

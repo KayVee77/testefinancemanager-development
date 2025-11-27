@@ -11,14 +11,16 @@ services:
       context: .
       dockerfile: Dockerfile.unified
       args:
-        # Use local dev auth for testing (no Cognito needed)
+        # New unified environment selector
+        VITE_APP_ENV: "docker"
+        VITE_ENVIRONMENT: "docker"
+        VITE_AWS_REGION: "eu-central-1"
+        VITE_API_BASE_URL: "/api"
+        # Legacy variables (backwards compatibility)
         VITE_DEV_ONLY_AUTH: "true"
         VITE_USE_DYNAMODB: "true"
         VITE_RUNTIME: "local"
-        VITE_ENVIRONMENT: "docker-unified"
-        VITE_AWS_REGION: "eu-central-1"
-        VITE_API_BASE_URL: "/api"
-        # These are only used when VITE_DEV_ONLY_AUTH=false
+        # Cognito (only for production mode)
         # VITE_AWS_COGNITO_USER_POOL_ID: "eu-central-1_kaKX5BNfr"
         # VITE_AWS_COGNITO_CLIENT_ID: "63k0okn09vas104vcjb71vhgd7"
     container_name: financeflow-unified
