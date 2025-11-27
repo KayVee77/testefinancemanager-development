@@ -21,12 +21,12 @@ const TABLES = {
 const dynamoConfig = IS_AWS
   ? {
       // AWS Production - uses IAM role credentials from ECS task
-      region: process.env.AWS_REGION || 'eu-north-1'
+      region: process.env.AWS_REGION || 'eu-central-1'
     }
   : {
       // Local development - connects to DynamoDB Local in Docker
       endpoint: process.env.DYNAMODB_ENDPOINT || 'http://dynamodb-local:8000',
-      region: process.env.AWS_REGION || 'eu-north-1',
+      region: process.env.AWS_REGION || 'eu-central-1',
       credentials: {
         accessKeyId: 'local',
         secretAccessKey: 'local'

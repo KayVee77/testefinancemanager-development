@@ -33,7 +33,7 @@
                                                          },
                                                          {
                                                              "name":  "DYNAMODB_ENDPOINT",
-                                                             "value":  "https://dynamodb.eu-north-1.amazonaws.com"
+                                                             "value":  "https://dynamodb.eu-central-1.amazonaws.com"
                                                          },
                                                          {
                                                              "name":  "OPENAI_API_KEY",

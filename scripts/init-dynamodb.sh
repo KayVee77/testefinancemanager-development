@@ -3,7 +3,7 @@
 # Run after docker-compose up: ./scripts/init-dynamodb.sh
 
 ENDPOINT="http://localhost:8000"
-REGION="eu-north-1"
+REGION="eu-central-1"
 
 echo "Creating DynamoDB tables for local development..."
 

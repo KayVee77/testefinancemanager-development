@@ -137,14 +137,16 @@ export async function generateAISuggestions(
   language: 'lt' | 'en' = 'lt'
 ): Promise<string[]> {
   // Determine API endpoint (local dev server or AWS Lambda)
-  const localDevUrl = import.meta.env.VITE_API_BASE_URL;
-  const awsUrl = import.meta.env.VITE_API_GATEWAY_URL;
-  const apiUrl = localDevUrl || awsUrl || 'http://localhost:3001';
+  // VITE_API_BASE_URL is '/api' in production, or full URL like 'http://localhost:3001' in dev
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+  // If baseUrl already ends with /api, use /ai/suggestions; otherwise use /api/ai/suggestions
+  const aiEndpoint = baseUrl.endsWith('/api') ? '/ai/suggestions' : '/api/ai/suggestions';
+  const apiUrl = baseUrl || 'http://localhost:3001';
   
-  console.log(`🤖 Calling AI API: ${apiUrl}/api/ai/suggestions`);
+  console.log(`🤖 Calling AI API: ${apiUrl}${aiEndpoint}`);
   
   try {
-    const response = await fetch(`${apiUrl}/api/ai/suggestions`, {
+    const response = await fetch(`${apiUrl}${aiEndpoint}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -203,14 +205,16 @@ export async function generateFollowUpResponse(
   initialSuggestions: string[],
   language: 'lt' | 'en' = 'lt'
 ): Promise<string> {
-  const localDevUrl = import.meta.env.VITE_API_BASE_URL;
-  const awsUrl = import.meta.env.VITE_API_GATEWAY_URL;
-  const apiUrl = localDevUrl || awsUrl || 'http://localhost:3001';
+  // VITE_API_BASE_URL is '/api' in production, or full URL like 'http://localhost:3001' in dev
+  const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
+  // If baseUrl already ends with /api, use /ai/follow-up; otherwise use /api/ai/follow-up
+  const aiEndpoint = baseUrl.endsWith('/api') ? '/ai/follow-up' : '/api/ai/follow-up';
+  const apiUrl = baseUrl || 'http://localhost:3001';
   
-  console.log(`🔄 Calling follow-up API: ${apiUrl}/api/ai/follow-up`);
+  console.log(`🔄 Calling follow-up API: ${apiUrl}${aiEndpoint}`);
   
   try {
-    const response = await fetch(`${apiUrl}/api/ai/follow-up`, {
+    const response = await fetch(`${apiUrl}${aiEndpoint}`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

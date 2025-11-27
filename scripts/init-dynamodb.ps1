@@ -2,7 +2,7 @@
 # Run after docker-compose up: .\scripts\init-dynamodb.ps1
 
 $ENDPOINT = "http://localhost:8000"
-$REGION = "eu-north-1"
+$REGION = "eu-central-1"
 
 Write-Host "Creating DynamoDB tables for local development..." -ForegroundColor Cyan
 

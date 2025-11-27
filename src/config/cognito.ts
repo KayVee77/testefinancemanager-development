@@ -14,7 +14,7 @@ import { WebStorageStateStore } from 'oidc-client-ts';
 
 // Get region from User Pool ID (format: eu-central-1_XXXXXXXX)
 const userPoolId = import.meta.env.VITE_AWS_COGNITO_USER_POOL_ID || '';
-const region = userPoolId.split('_')[0] || import.meta.env.VITE_AWS_REGION || 'eu-north-1';
+const region = userPoolId.split('_')[0] || import.meta.env.VITE_AWS_REGION || 'eu-central-1';
 
 // Build the Cognito OIDC authority URL
 const authority = userPoolId 
