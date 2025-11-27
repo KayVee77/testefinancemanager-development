@@ -7,8 +7,8 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { USE_DEV_AUTH } from '../config/env';
 
 interface AuthFormProps {
-  onLogin: (credentials?: LoginCredentials) => Promise<boolean>;
-  onRegister: (data?: RegisterData) => Promise<boolean>;
+  onLogin: (credentials: LoginCredentials) => Promise<boolean>;
+  onRegister: (data: RegisterData) => Promise<boolean>;
 }
 
 interface ValidationErrors {

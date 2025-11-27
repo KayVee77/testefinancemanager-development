@@ -1,5 +1,6 @@
 import { Transaction, Category } from '../types/Transaction';
 import { startOfMonth, endOfMonth, differenceInDays } from 'date-fns';
+import { API_BASE_URL, getApiUrl } from '../config/env';
 
 /**
  * Follow-up prompt type for interactive flashcards
@@ -128,25 +129,22 @@ export function hasEnoughDataForAi(transactions: Transaction[]): boolean {
  * Call backend API to generate AI suggestions
  * Returns array of Lithuanian-language suggestions
  * 
- * Supports two modes:
- * 1. Local dev: VITE_API_BASE_URL=http://localhost:3001 (OpenAI via Node.js server)
- * 2. AWS prod: VITE_API_GATEWAY_URL=https://... (OpenAI via Lambda)
+ * Uses centralized API_BASE_URL from config/env.ts:
+ * - local: http://localhost:3001 (dev-server)
+ * - docker: /api (nginx proxy)
+ * - production: /api (CloudFront proxy to API Gateway)
  */
 export async function generateAISuggestions(
   summary: BudgetAiSummary,
   language: 'lt' | 'en' = 'lt'
 ): Promise<string[]> {
-  // Determine API endpoint (local dev server or AWS Lambda)
-  // VITE_API_BASE_URL is '/api' in production, or full URL like 'http://localhost:3001' in dev
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
-  // If baseUrl already ends with /api, use /ai/suggestions; otherwise use /api/ai/suggestions
-  const aiEndpoint = baseUrl.endsWith('/api') ? '/ai/suggestions' : '/api/ai/suggestions';
-  const apiUrl = baseUrl || 'http://localhost:3001';
+  // Use centralized API URL from config
+  const apiUrl = getApiUrl('/ai/suggestions');
   
-  console.log(`🤖 Calling AI API: ${apiUrl}${aiEndpoint}`);
+  console.log(`🤖 Calling AI API: ${apiUrl}`);
   
   try {
-    const response = await fetch(`${apiUrl}${aiEndpoint}`, {
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -205,16 +203,13 @@ export async function generateFollowUpResponse(
   initialSuggestions: string[],
   language: 'lt' | 'en' = 'lt'
 ): Promise<string> {
-  // VITE_API_BASE_URL is '/api' in production, or full URL like 'http://localhost:3001' in dev
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || '';
-  // If baseUrl already ends with /api, use /ai/follow-up; otherwise use /api/ai/follow-up
-  const aiEndpoint = baseUrl.endsWith('/api') ? '/ai/follow-up' : '/api/ai/follow-up';
-  const apiUrl = baseUrl || 'http://localhost:3001';
+  // Use centralized API URL from config
+  const apiUrl = getApiUrl('/ai/follow-up');
   
-  console.log(`🔄 Calling follow-up API: ${apiUrl}${aiEndpoint}`);
+  console.log(`🔄 Calling follow-up API: ${apiUrl}`);
   
   try {
-    const response = await fetch(`${apiUrl}${aiEndpoint}`, {
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

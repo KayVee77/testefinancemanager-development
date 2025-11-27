@@ -23,6 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 .env
+.env.docker
+.env.local
 CODE_REVIEW_REPORT.md
 GETTING_STARTED.md
 IMPLEMENTATION_CHECKLIST.md
@@ -38,3 +40,4 @@ PHASE_1.1_INTEGRATION_GUIDE.md
 PHASE_1.1_SUMMARY.md
 SECURITY_TESTING_REPORT.md
 *.md
+.env.docker
