@@ -8,29 +8,43 @@ import { DynamoDBDocumentClient, PutCommand, QueryCommand, UpdateCommand, Delete
 // Load environment variables
 dotenv.config();
 
-// Initialize DynamoDB Client (connects to DynamoDB Local in Docker)
-const dynamoClient = new DynamoDBClient({
-  endpoint: process.env.DYNAMODB_ENDPOINT || 'http://dynamodb-local:8000',
-  region: process.env.AWS_REGION || 'eu-north-1',
-  credentials: {
-    accessKeyId: 'local',
-    secretAccessKey: 'local'
-  }
-});
+// Detect if running in AWS (no DYNAMODB_ENDPOINT set means use real AWS)
+const IS_AWS = !process.env.DYNAMODB_ENDPOINT || process.env.DYNAMODB_ENDPOINT.includes('amazonaws.com');
 
+// DynamoDB table names (different for local vs AWS)
+const TABLES = {
+  transactions: process.env.TRANSACTIONS_TABLE || (IS_AWS ? 'financeflow-transactions-poc' : 'Transactions'),
+  categories: process.env.CATEGORIES_TABLE || (IS_AWS ? 'financeflow-categories-poc' : 'Categories')
+};
+
+// Initialize DynamoDB Client
+const dynamoConfig = IS_AWS
+  ? {
+      // AWS Production - uses IAM role credentials from ECS task
+      region: process.env.AWS_REGION || 'eu-north-1'
+    }
+  : {
+      // Local development - connects to DynamoDB Local in Docker
+      endpoint: process.env.DYNAMODB_ENDPOINT || 'http://dynamodb-local:8000',
+      region: process.env.AWS_REGION || 'eu-north-1',
+      credentials: {
+        accessKeyId: 'local',
+        secretAccessKey: 'local'
+      }
+    };
+
+const dynamoClient = new DynamoDBClient(dynamoConfig);
 const docClient = DynamoDBDocumentClient.from(dynamoClient);
 
-// Validate OpenAI API key
-if (!process.env.OPENAI_API_KEY) {
-  console.error('❌ ERROR: OPENAI_API_KEY is not set in .env file');
-  console.error('   Please copy .env.example to .env and add your OpenAI API key');
-  process.exit(1);
-}
+// Validate OpenAI API key (optional - only needed for AI features in container)
+const hasOpenAI = !!process.env.OPENAI_API_KEY;
+let openai = null;
 
-// Initialize OpenAI client
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+if (hasOpenAI) {
+  openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  });
+}
 
 // System prompts for AI financial coach (multilingual)
 // Optimized for concise, demo-friendly responses
@@ -572,7 +586,7 @@ app.get('/users/:userId/transactions', async (req, res) => {
     const userId = req.params.userId;
     
     const command = new QueryCommand({
-      TableName: 'Transactions',
+      TableName: TABLES.transactions,
       KeyConditionExpression: 'userId = :userId',
       ExpressionAttributeValues: {
         ':userId': userId
@@ -611,7 +625,7 @@ app.post('/users/:userId/transactions', async (req, res) => {
     const date = transaction.date ?? transaction.postedAt;
     
     const command = new PutCommand({
-      TableName: 'Transactions',
+      TableName: TABLES.transactions,
       Item: {
         userId,
         transactionId: transaction.id,
@@ -658,7 +672,7 @@ app.put('/users/:userId/transactions/:id', async (req, res) => {
     const date = updates.date ?? updates.postedAt;
     
     const command = new UpdateCommand({
-      TableName: 'Transactions',
+      TableName: TABLES.transactions,
       Key: {
         userId,
         transactionId
@@ -705,7 +719,7 @@ app.delete('/users/:userId/transactions/:id', async (req, res) => {
     const transactionId = req.params.id;
     
     const command = new DeleteCommand({
-      TableName: 'Transactions',
+      TableName: TABLES.transactions,
       Key: {
         userId,
         transactionId
@@ -730,7 +744,7 @@ app.get('/users/:userId/categories', async (req, res) => {
     const userId = req.params.userId;
     
     const command = new QueryCommand({
-      TableName: 'Categories',
+      TableName: TABLES.categories,
       KeyConditionExpression: 'userId = :userId',
       ExpressionAttributeValues: {
         ':userId': userId
@@ -763,7 +777,7 @@ app.post('/users/:userId/categories', async (req, res) => {
     const category = req.body;
     
     const command = new PutCommand({
-      TableName: 'Categories',
+      TableName: TABLES.categories,
       Item: {
         userId,
         categoryId: category.id,
@@ -786,11 +800,13 @@ app.post('/users/:userId/categories', async (req, res) => {
 app.listen(PORT, () => {
   console.log('');
   console.log('='.repeat(60));
-  console.log('🚀 FinanceFlow AI Dev Server + DynamoDB Local API');
+  console.log('🚀 FinanceFlow Express API Server');
   console.log('='.repeat(60));
   console.log(`✅ Server running on port ${PORT}`);
-  console.log(`✅ OpenAI: ${process.env.OPENAI_API_KEY ? 'Configured' : 'Not configured'}`);
-  console.log(`✅ DynamoDB: ${process.env.DYNAMODB_ENDPOINT || 'http://dynamodb-local:8000'}`);
+  console.log(`✅ Environment: ${IS_AWS ? 'AWS Production' : 'Local Development'}`);
+  console.log(`✅ OpenAI: ${hasOpenAI ? 'Configured' : 'Not configured (use Lambda for AI)'}`);
+  console.log(`✅ DynamoDB: ${IS_AWS ? 'AWS DynamoDB' : process.env.DYNAMODB_ENDPOINT || 'http://dynamodb-local:8000'}`);
+  console.log(`✅ Tables: ${TABLES.transactions}, ${TABLES.categories}`);
   console.log('');
   console.log('Available endpoints:');
   console.log(`   GET    http://localhost:${PORT}/health`);

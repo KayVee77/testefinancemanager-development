@@ -1,0 +1,103 @@
+{
+    "taskDefinitionArn": "arn:aws:ecs:eu-central-1:703524245589:task-definition/financeflow-task-poc:1",
+    "containerDefinitions": [
+        {
+            "name": "financeflow-app",
+            "image": "703524245589.dkr.ecr.eu-central-1.amazonaws.com/financeflow-unified-poc:latest",
+            "cpu": 0,
+            "portMappings": [
+                {
+                    "containerPort": 80,
+                    "hostPort": 80,
+                    "protocol": "tcp",
+                    "name": "financeflow-app-80-tcp",
+                    "appProtocol": "http"
+                }
+            ],
+            "essential": true,
+            "environment": [
+                {
+                    "name": "AWS_REGION",
+                    "value": "eu-central-1"
+                },
+                {
+                    "name": "DYNAMODB_ENDPOINT",
+                    "value": "https://dynamodb.eu-north-1.amazonaws.com"
+                },
+                {
+                    "name": "OPENAI_API_KEY",
+                    "value": "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"
+                }
+            ],
+            "environmentFiles": [],
+            "mountPoints": [],
+            "volumesFrom": [],
+            "ulimits": [],
+            "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                    "awslogs-group": "/ecs/financeflow-task-poc",
+                    "awslogs-create-group": "true",
+                    "awslogs-region": "eu-central-1",
+                    "awslogs-stream-prefix": "ecs"
+                },
+                "secretOptions": []
+            },
+            "systemControls": []
+        }
+    ],
+    "family": "financeflow-task-poc",
+    "taskRoleArn": "arn:aws:iam::703524245589:role/financeflow-ecs-task-role-poc",
+    "executionRoleArn": "arn:aws:iam::703524245589:role/financeflow-ecs-task-role-poc",
+    "networkMode": "awsvpc",
+    "revision": 1,
+    "volumes": [],
+    "status": "ACTIVE",
+    "requiresAttributes": [
+        {
+            "name": "com.amazonaws.ecs.capability.logging-driver.awslogs"
+        },
+        {
+            "name": "ecs.capability.execution-role-awslogs"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.ecr-auth"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.docker-remote-api.1.19"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.task-iam-role"
+        },
+        {
+            "name": "ecs.capability.execution-role-ecr-pull"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.docker-remote-api.1.18"
+        },
+        {
+            "name": "ecs.capability.task-eni"
+        },
+        {
+            "name": "com.amazonaws.ecs.capability.docker-remote-api.1.29"
+        }
+    ],
+    "placementConstraints": [],
+    "compatibilities": [
+        "EC2",
+        "FARGATE",
+        "MANAGED_INSTANCES"
+    ],
+    "runtimePlatform": {
+        "cpuArchitecture": "X86_64",
+        "operatingSystemFamily": "LINUX"
+    },
+    "requiresCompatibilities": [
+        "FARGATE"
+    ],
+    "cpu": "512",
+    "memory": "1024",
+    "registeredAt": "2025-11-26T23:00:55.878000+02:00",
+    "registeredBy": "arn:aws:iam::703524245589:user/devKristupasVisciuna",
+    "enableFaultInjection": false
+}

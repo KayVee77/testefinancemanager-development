@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { User, Mail, Lock, Eye, EyeOff, LogIn, UserPlus, Languages } from 'lucide-react';
+import { User, Mail, Lock, Eye, EyeOff, LogIn, UserPlus, Languages, Cloud } from 'lucide-react';
 import { LoginCredentials, RegisterData, validateEmail, validatePassword } from '../utils/auth';
 import { sanitizeAndTrim } from '../utils/sanitize';
 import { useTranslation } from '../hooks/useTranslation';
 import { useLanguage } from '../contexts/LanguageContext';
+import { USE_DEV_AUTH } from '../config/env';
 
 interface AuthFormProps {
-  onLogin: (credentials: LoginCredentials) => Promise<boolean>;
-  onRegister: (data: RegisterData) => Promise<boolean>;
+  onLogin: (credentials?: LoginCredentials) => Promise<boolean>;
+  onRegister: (data?: RegisterData) => Promise<boolean>;
 }
 
 interface ValidationErrors {
@@ -173,6 +174,69 @@ export const AuthForm: React.FC<AuthFormProps> = ({ onLogin, onRegister }) => {
     setLanguage(language === 'lt' ? 'en' : 'lt');
   };
 
+  // AWS MODE: Show simplified Cognito login button (only when NOT using dev auth)
+  if (!USE_DEV_AUTH) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8 relative">
+            {/* Language Switcher */}
+            <button
+              onClick={toggleLanguage}
+              className="absolute top-4 right-4 flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+              type="button"
+            >
+              <Languages className="h-4 w-4" />
+              <span className={language === 'lt' ? 'text-blue-600 font-semibold' : ''}>LT</span>
+              <span className="text-gray-400">|</span>
+              <span className={language === 'en' ? 'text-blue-600 font-semibold' : ''}>EN</span>
+            </button>
+
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-full mb-4">
+                <Cloud className="h-8 w-8 text-blue-600" />
+              </div>
+              <h1 className="text-2xl font-bold text-gray-900 mb-2">
+                FinanceFlow
+              </h1>
+              <p className="text-gray-600">
+                {language === 'lt' ? 'Asmeninio biudžeto valdymas' : 'Personal Finance Manager'}
+              </p>
+            </div>
+
+            <button
+              onClick={() => onLogin()}
+              disabled={isLoading}
+              className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+            >
+              {isLoading ? (
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                <>
+                  <LogIn className="h-5 w-5 mr-2" />
+                  {language === 'lt' ? 'Prisijungti su AWS Cognito' : 'Sign in with AWS Cognito'}
+                </>
+              )}
+            </button>
+
+            <p className="mt-6 text-center text-sm text-gray-500">
+              {language === 'lt' 
+                ? 'Neturite paskyros? Sukursite ją prisijungimo puslapyje.' 
+                : "Don't have an account? You can create one on the login page."}
+            </p>
+          </div>
+
+          <div className="mt-8 text-center">
+            <p className="text-sm text-gray-500">
+              {t('auth.privacyNotice')}
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // LOCAL MODE: Show traditional email/password form
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 flex items-center justify-center p-4">
       <div className="w-full max-w-md">

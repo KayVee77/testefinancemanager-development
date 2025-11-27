@@ -1,0 +1,73 @@
+{
+    "taskRoleArn":  "arn:aws:iam::703524245589:role/financeflow-ecs-task-role-poc",
+    "networkMode":  "awsvpc",
+    "cpu":  "512",
+    "runtimePlatform":  {
+                            "cpuArchitecture":  "X86_64",
+                            "operatingSystemFamily":  "LINUX"
+                        },
+    "memory":  "1024",
+    "executionRoleArn":  "arn:aws:iam::703524245589:role/financeflow-ecs-task-role-poc",
+    "requiresCompatibilities":  [
+                                    "FARGATE"
+                                ],
+    "containerDefinitions":  [
+                                 {
+                                     "name":  "financeflow-app",
+                                     "image":  "703524245589.dkr.ecr.eu-central-1.amazonaws.com/financeflow-unified-poc:latest",
+                                     "cpu":  0,
+                                     "portMappings":  [
+                                                          {
+                                                              "containerPort":  8080,
+                                                              "hostPort":  8080,
+                                                              "protocol":  "tcp",
+                                                              "name":  "financeflow-app-8080-tcp",
+                                                              "appProtocol":  "http"
+                                                          }
+                                                      ],
+                                     "essential":  true,
+                                     "environment":  [
+                                                         {
+                                                             "name":  "AWS_REGION",
+                                                             "value":  "eu-central-1"
+                                                         },
+                                                         {
+                                                             "name":  "DYNAMODB_ENDPOINT",
+                                                             "value":  "https://dynamodb.eu-north-1.amazonaws.com"
+                                                         },
+                                                         {
+                                                             "name":  "OPENAI_API_KEY",
+                                                             "value":  "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"
+                                                         }
+                                                     ],
+                                     "environmentFiles":  [
+
+                                                          ],
+                                     "mountPoints":  [
+
+                                                     ],
+                                     "volumesFrom":  [
+
+                                                     ],
+                                     "ulimits":  [
+
+                                                 ],
+                                     "logConfiguration":  {
+                                                              "logDriver":  "awslogs",
+                                                              "options":  {
+                                                                              "awslogs-group":  "/ecs/financeflow-task-poc",
+                                                                              "awslogs-create-group":  "true",
+                                                                              "awslogs-region":  "eu-central-1",
+                                                                              "awslogs-stream-prefix":  "ecs"
+                                                                          },
+                                                              "secretOptions":  [
+
+                                                                                ]
+                                                          },
+                                     "systemControls":  [
+
+                                                        ]
+                                 }
+                             ],
+    "family":  "financeflow-task-poc"
+}

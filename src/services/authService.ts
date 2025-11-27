@@ -3,19 +3,17 @@
  * 
  * This service handles all authentication operations with dual-environment support.
  * 
- * ⚠️ ARCHITECTURAL DECISION: Keep userId explicit in all methods
+ * LOCAL mode: Uses localStorage-based auth (development)
+ * AWS mode: Uses AWS Cognito with OIDC via react-oidc-context
  * 
- * Why explicit userId?
- * - Components need user object anyway (for display, navigation, etc.)
- * - Makes testing easier (no need to mock store)
- * - LOCAL mode needs userId for storage keys
- * - Clearer API - you see exactly what's being passed
+ * ⚠️ IMPORTANT: In AWS mode, most auth operations are handled by react-oidc-context.
+ * This service provides a unified interface and handles LOCAL mode operations.
  * 
  * Pattern: Service contains business logic, store manages state, hook combines both.
  */
 
 import { User } from '../types/User';
-import { IS_AWS_MODE } from '../config/env';
+import { USE_DEV_AUTH, IS_AWS_MODE } from '../config/env';
 import { 
   authenticateUser, 
   saveUser, 
@@ -28,16 +26,22 @@ import { logger } from '../errors';
 import { AuthError } from '../errors/ApplicationError';
 import { getTranslation } from '../i18n';
 import { translations } from '../i18n';
+import { getCognitoLogoutUrl } from '../config/cognito';
 
 /**
  * Auth Service
  * 
  * Handles authentication operations for both LOCAL and AWS environments.
- * Store updates happen in the hooks, not here.
+ * 
+ * AWS MODE NOTE:
+ * In AWS mode, login/register are handled by Cognito Hosted UI via react-oidc-context.
+ * Use the useAuth() hook from react-oidc-context for auth.signinRedirect().
  */
 export const authService = {
   /**
-   * Login user
+   * Login user (LOCAL mode only)
+   * 
+   * In AWS mode, use auth.signinRedirect() from react-oidc-context instead.
    * 
    * @param credentials - Email and password
    * @returns Authenticated user
@@ -45,14 +49,11 @@ export const authService = {
    */
   async login(credentials: LoginCredentials): Promise<User> {
     try {
-      if (IS_AWS_MODE) {
-        // AWS: Cognito authentication
-        // TODO: Implement when AWS is deployed
-        // const cognitoUser = await Auth.signIn(credentials.email, credentials.password);
-        // const response = await http.get<User>('/users/me');
-        // return response;
+      if (!USE_DEV_AUTH) {
+        // AWS: Use Cognito OIDC flow
+        // This should not be called in AWS mode - use auth.signinRedirect() instead
         throw new AuthError(
-          'AWS Cognito not yet implemented'
+          'In AWS mode, use auth.signinRedirect() from useAuth() hook'
         );
       } else {
         // LOCAL: Development auth with localStorage
@@ -93,7 +94,9 @@ export const authService = {
   },
   
   /**
-   * Register new user
+   * Register new user (LOCAL mode only)
+   * 
+   * In AWS mode, use Cognito Hosted UI for registration.
    * 
    * @param data - User registration data
    * @returns New user
@@ -101,14 +104,11 @@ export const authService = {
    */
   async register(data: RegisterData): Promise<User> {
     try {
-      if (IS_AWS_MODE) {
-        // AWS: Cognito sign-up
-        // TODO: Implement when AWS is deployed
-        // await Auth.signUp({ username: data.email, password: data.password });
-        // const response = await http.post<User>('/users', data);
-        // return response;
+      if (!USE_DEV_AUTH) {
+        // AWS: Use Cognito Hosted UI for registration
+        // Cognito handles sign-up, verification email, etc.
         throw new AuthError(
-          'AWS Cognito not yet implemented'
+          'In AWS mode, use Cognito Hosted UI for registration'
         );
       } else {
         // LOCAL: Save to localStorage
@@ -139,18 +139,15 @@ export const authService = {
   /**
    * Logout user
    * 
-   * Note: This only handles the authentication provider logout.
-   * Store cleanup happens in the hook.
+   * Handles logout for both LOCAL and AWS modes.
    */
   async logout(): Promise<void> {
     try {
-      if (IS_AWS_MODE) {
-        // AWS: Cognito sign-out
-        // TODO: Implement when AWS is deployed
-        // await Auth.signOut();
-        throw new AuthError(
-          'AWS Cognito not yet implemented'
-        );
+      if (!USE_DEV_AUTH) {
+        // AWS: Redirect to Cognito logout URL
+        console.log('[AuthService] Redirecting to Cognito logout...');
+        window.location.href = getCognitoLogoutUrl();
+        return;
       } else {
         // LOCAL: Clear localStorage session
         localLogout();
@@ -167,42 +164,52 @@ export const authService = {
       // Still show success (user experience)
       notificationService.success('Atsijungėte');
     }
+  },
+
+  /**
+   * Convert OIDC user profile to app User type
+   * 
+   * Used in AWS mode to convert the Cognito user profile
+   * to our internal User format.
+   */
+  convertOidcUserToAppUser(oidcUser: { profile: { email?: string; name?: string; sub?: string } }): User {
+    return {
+      id: oidcUser.profile.sub || '',
+      email: oidcUser.profile.email || '',
+      name: oidcUser.profile.name || oidcUser.profile.email?.split('@')[0] || 'User',
+      passwordHash: '' // Not used in AWS mode
+    };
   }
 };
 
 /*
  * 📝 USAGE NOTES:
  * 
- * DO NOT use this service directly in components!
- * Use the useAuth() hook instead:
+ * LOCAL MODE (development):
+ * Use the useAuth() hook from src/hooks/useAuth.ts
  * 
- * import { useAuth } from '@/hooks/useAuth';
+ * AWS MODE (production with Cognito):
+ * Use the useAuth() hook from react-oidc-context for:
+ * - auth.signinRedirect() - Start login flow
+ * - auth.signoutRedirect() - Start logout flow
+ * - auth.user - Current user info
+ * - auth.isAuthenticated - Auth status
  * 
- * function LoginForm() {
- *   const { login, isLoading } = useAuth();
- *   
- *   const handleSubmit = async (e) => {
- *     e.preventDefault();
- *     await login({ email, password });
- *   };
- * }
- * 
- * The hook combines this service with authStore for state management.
+ * The app's useAuth hook abstracts this difference.
  */
 
 /*
  * 🔄 ENVIRONMENT BEHAVIOR:
  * 
- * LOCAL mode (VITE_RUNTIME=local):
+ * LOCAL mode (VITE_DEV_ONLY_AUTH=true):
  * - login() → authenticateUser() → localStorage
  * - register() → saveUser() → localStorage
  * - logout() → localLogout() → clear localStorage
  * 
- * AWS mode (VITE_RUNTIME=aws):
- * - login() → AWS Cognito sign-in → JWT tokens
- * - register() → AWS Cognito sign-up → verification email
- * - logout() → AWS Cognito sign-out → clear tokens
- * 
- * This service abstracts the environment differences.
- * Components don't need to know which mode they're in.
+ * AWS mode (VITE_DEV_ONLY_AUTH=false):
+ * - Login → auth.signinRedirect() → Cognito Hosted UI → callback
+ * - Register → Cognito Hosted UI (has sign-up option)
+ * - logout() → Redirect to Cognito logout URL
+ * - User info comes from OIDC tokens
  */
+

@@ -1,0 +1,52 @@
+{
+    "CallerReference":  "financeflow-20251127002838",
+    "PriceClass":  "PriceClass_100",
+    "Origins":  {
+                    "Quantity":  1,
+                    "Items":  [
+                                  {
+                                      "CustomOriginConfig":  {
+                                                                 "HTTPSPort":  443,
+                                                                 "OriginSslProtocols":  {
+                                                                                            "Quantity":  1,
+                                                                                            "Items":  [
+                                                                                                          "TLSv1.2"
+                                                                                                      ]
+                                                                                        },
+                                                                 "HTTPPort":  80,
+                                                                 "OriginProtocolPolicy":  "http-only"
+                                                             },
+                                      "Id":  "financeflow-alb-origin",
+                                      "DomainName":  "financeflow-alb-poc-675179177.eu-central-1.elb.amazonaws.com"
+                                  }
+                              ]
+                },
+    "DefaultCacheBehavior":  {
+                                 "TargetOriginId":  "financeflow-alb-origin",
+                                 "OriginRequestPolicyId":  "216adef6-5c7f-47e4-b989-5492eafa07d3",
+                                 "AllowedMethods":  {
+                                                        "Quantity":  7,
+                                                        "Items":  [
+                                                                      "GET",
+                                                                      "HEAD",
+                                                                      "OPTIONS",
+                                                                      "PUT",
+                                                                      "POST",
+                                                                      "PATCH",
+                                                                      "DELETE"
+                                                                  ],
+                                                        "CachedMethods":  {
+                                                                              "Quantity":  2,
+                                                                              "Items":  [
+                                                                                            "GET",
+                                                                                            "HEAD"
+                                                                                        ]
+                                                                          }
+                                                    },
+                                 "ViewerProtocolPolicy":  "redirect-to-https",
+                                 "CachePolicyId":  "658327ea-f89d-4fab-a63d-7e88639e58f6",
+                                 "Compress":  true
+                             },
+    "Enabled":  true,
+    "Comment":  "FinanceFlow thesis app with HTTPS"
+}

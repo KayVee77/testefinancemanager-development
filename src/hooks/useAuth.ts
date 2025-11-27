@@ -10,128 +10,176 @@
  * - Manages authentication state
  * - Handles login/register/logout
  * - Auto-initializes on mount
- * - Environment-aware (LOCAL/AWS)
+ * - Environment-aware (LOCAL/AWS with Cognito OIDC)
  */
 
+import { useEffect } from 'react';
+import { useAuth as useOidcAuth } from 'react-oidc-context';
 import { useAuthStore } from '../stores/authStore';
 import { authService } from '../services/authService';
 import { LoginCredentials, RegisterData } from '../utils/auth';
+import { IS_AWS_MODE } from '../config/env';
+import { isCognitoConfigured } from '../config/cognito';
+
+// Check if we should use OIDC auth
+const useOidc = IS_AWS_MODE && isCognitoConfigured();
+console.info('[useAuth] useOidc:', useOidc, 'IS_AWS_MODE:', IS_AWS_MODE, 'isCognitoConfigured:', isCognitoConfigured());
 
 /**
  * Authentication hook
  * 
+ * Provides a unified interface for both LOCAL and AWS (Cognito OIDC) modes.
+ * 
  * @returns Auth state and actions
  */
 export const useAuth = () => {
-  const { user, isAuthenticated, isLoading, setUser, logout: storeLogout, initialize } = useAuthStore();
+  // LOCAL mode store
+  const store = useAuthStore();
   
-  /**
-   * Login user
-   * 
-   * @param credentials - Email and password
-   * @throws Error if login fails
-   */
-  const login = async (credentials: LoginCredentials) => {
-    try {
-      const user = await authService.login(credentials);
-      setUser(user); // Update store
-      return user;
-    } catch (error) {
-      // Error already logged and notified in service
-      throw error;
+  // AWS mode: Use OIDC auth (only if configured)
+  // We call the hook conditionally based on environment
+  const oidcAuth = useOidc ? useOidcAuthSafe() : null;
+  console.info('[useAuth] oidcAuth:', oidcAuth ? 'available' : 'null');
+  
+  // Sync OIDC user to store when in AWS mode
+  useEffect(() => {
+    if (useOidc && oidcAuth?.isAuthenticated && oidcAuth?.user) {
+      const appUser = authService.convertOidcUserToAppUser(oidcAuth.user);
+      store.setUser(appUser);
+    } else if (useOidc && !oidcAuth?.isAuthenticated && !oidcAuth?.isLoading) {
+      // User logged out from OIDC
+      store.logout();
     }
-  };
+  }, [oidcAuth?.isAuthenticated, oidcAuth?.user, oidcAuth?.isLoading]);
   
-  /**
-   * Register new user
-   * 
-   * @param data - User registration data
-   * @throws Error if registration fails
-   */
-  const register = async (data: RegisterData) => {
-    try {
-      const user = await authService.register(data);
-      setUser(user); // Update store
-      return user;
-    } catch (error) {
-      // Error already logged and notified in service
-      throw error;
-    }
-  };
+  // AWS MODE: Return OIDC-based auth
+  if (useOidc && oidcAuth) {
+    return {
+      // State - from OIDC
+      user: oidcAuth.isAuthenticated && oidcAuth.user 
+        ? authService.convertOidcUserToAppUser(oidcAuth.user)
+        : null,
+      isAuthenticated: oidcAuth.isAuthenticated,
+      isLoading: oidcAuth.isLoading,
+      
+      // Actions
+      login: async () => {
+        // Redirect to Cognito login page
+        console.info('[useAuth] login() called, calling signinRedirect...');
+        console.info('[useAuth] oidcAuth.signinRedirect:', typeof oidcAuth.signinRedirect);
+        try {
+          await oidcAuth.signinRedirect();
+          console.info('[useAuth] signinRedirect completed');
+        } catch (error) {
+          console.error('[useAuth] signinRedirect error:', error);
+          throw error;
+        }
+      },
+      register: async () => {
+        // Cognito Hosted UI handles registration
+        // Just redirect to login, user can sign up there
+        await oidcAuth.signinRedirect();
+      },
+      logout: async () => {
+        await oidcAuth.removeUser();
+        await authService.logout(); // Redirect to Cognito logout
+      },
+      initialize: async () => {
+        // OIDC handles this automatically
+      },
+      
+      // Expose OIDC-specific data for AWS mode
+      accessToken: oidcAuth.user?.access_token,
+      idToken: oidcAuth.user?.id_token,
+    };
+  }
   
-  /**
-   * Logout user
-   * 
-   * Clears both auth provider session and local store.
-   */
-  const logout = async () => {
-    try {
-      await authService.logout(); // Clear auth provider (Cognito/localStorage)
-      storeLogout(); // Clear store
-    } catch (error) {
-      // Always allow logout even if service fails
-      storeLogout();
-    }
-  };
-  
+  // LOCAL MODE: Return localStorage-based auth
   return {
     // State
-    user,
-    isAuthenticated,
-    isLoading,
+    user: store.user,
+    isAuthenticated: store.isAuthenticated,
+    isLoading: store.isLoading,
     
     // Actions
-    login,
-    register,
-    logout,
-    initialize
+    login: async (credentials: LoginCredentials) => {
+      try {
+        const user = await authService.login(credentials);
+        store.setUser(user);
+        return user;
+      } catch (error) {
+        throw error;
+      }
+    },
+    register: async (data: RegisterData) => {
+      try {
+        const user = await authService.register(data);
+        store.setUser(user);
+        return user;
+      } catch (error) {
+        throw error;
+      }
+    },
+    logout: async () => {
+      try {
+        await authService.logout();
+        store.logout();
+      } catch (error) {
+        store.logout();
+      }
+    },
+    initialize: store.initialize,
+    
+    // LOCAL mode doesn't have tokens
+    accessToken: undefined,
+    idToken: undefined,
   };
 };
+
+/**
+ * Safe wrapper for useOidcAuth that returns null if not in OIDC context
+ */
+function useOidcAuthSafe() {
+  try {
+    return useOidcAuth();
+  } catch {
+    // Not in OIDC context
+    return null;
+  }
+}
 
 /*
  * 📝 USAGE EXAMPLE:
  * 
  * function LoginPage() {
- *   const { login, isLoading } = useAuth();
- *   const [email, setEmail] = useState('');
- *   const [password, setPassword] = useState('');
+ *   const { login, isLoading, isAuthenticated } = useAuth();
+ *   
+ *   // In AWS mode, login() redirects to Cognito Hosted UI
+ *   // In LOCAL mode, login({ email, password }) authenticates locally
  *   
  *   const handleSubmit = async (e) => {
  *     e.preventDefault();
- *     try {
- *       await login({ email, password });
- *       // User is now authenticated, App.tsx will redirect
- *     } catch (error) {
- *       // Error notification already shown
+ *     if (IS_AWS_MODE) {
+ *       await login(); // Redirects to Cognito
+ *     } else {
+ *       await login({ email, password }); // Local auth
  *     }
  *   };
- *   
- *   return (
- *     <form onSubmit={handleSubmit}>
- *       <input 
- *         type="email" 
- *         value={email} 
- *         onChange={(e) => setEmail(e.target.value)} 
- *       />
- *       <input 
- *         type="password" 
- *         value={password} 
- *         onChange={(e) => setPassword(e.target.value)} 
- *       />
- *       <button disabled={isLoading}>
- *         {isLoading ? 'Prisijungiama...' : 'Prisijungti'}
- *       </button>
- *     </form>
- *   );
  * }
  */
 
 /*
  * 🔒 SECURITY NOTES:
  * 
- * - Passwords are never stored in clear text
- * - LOCAL mode: PBKDF2 hashing in utils/auth.ts
- * - AWS mode: AWS Cognito handles all auth security
- * - User object in store does NOT contain password
- * - Session persistence uses environment-specific methods
+ * LOCAL mode:
+ * - Passwords hashed with PBKDF2 in utils/auth.ts
+ * - Session stored in localStorage
+ * - Development only!
+ * 
+ * AWS mode (Cognito OIDC):
+ * - AWS Cognito handles all authentication
+ * - Tokens stored via oidc-client-ts (configurable)
+ * - Access token can be used for API authorization
+ * - ID token contains user profile info
  */
+
