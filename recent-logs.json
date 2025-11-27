@@ -1,0 +1,16 @@
+aws : 
+At line:1 char:1
++ aws logs filter-log-events --log-group-name "/ecs/financeflow-task-po ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+aws.exe: [ERROR]: argument --start-time: invalid int value: '1764274073108.54'
+
+usage: aws [options] <command> <subcommand> [<subcommand> ...] [parameters]
+To see help text, you can run:
+
+  aws help
+  aws <command> help
+  aws <command> <subcommand> help
+

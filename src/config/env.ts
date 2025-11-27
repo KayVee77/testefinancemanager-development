@@ -29,7 +29,7 @@ export const IS_DEV = import.meta.env.MODE === 'development';
 /**
  * AWS Region (for Cognito, API Gateway, etc.)
  */
-export const AWS_REGION = import.meta.env.VITE_AWS_REGION || 'eu-north-1';
+export const AWS_REGION = import.meta.env.VITE_AWS_REGION || 'eu-central-1';
 
 /**
  * API Gateway base URL (AWS mode only)

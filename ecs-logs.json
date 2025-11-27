@@ -1,0 +1,36 @@
+{
+    "events": [
+        {
+            "timestamp": 1764274486180,
+            "message": "2025-11-27 20:14:46,179 INFO Set uid to user 0 succeeded",
+            "ingestionTime": 1764274490839
+        },
+        {
+            "timestamp": 1764274486182,
+            "message": "2025-11-27 20:14:46,181 INFO supervisord started with pid 1",
+            "ingestionTime": 1764274490839
+        },
+        {
+            "timestamp": 1764274487184,
+            "message": "2025-11-27 20:14:47,184 INFO spawned: 'express' with pid 8",
+            "ingestionTime": 1764274490839
+        },
+        {
+            "timestamp": 1764274487187,
+            "message": "2025-11-27 20:14:47,187 INFO spawned: 'nginx' with pid 9",
+            "ingestionTime": 1764274490839
+        },
+        {
+            "timestamp": 1764274488200,
+            "message": "2025-11-27 20:14:48,200 INFO success: express entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)",
+            "ingestionTime": 1764274490839
+        },
+        {
+            "timestamp": 1764274488200,
+            "message": "2025-11-27 20:14:48,200 INFO success: nginx entered RUNNING state, process has stayed up for > than 1 seconds (startsecs)",
+            "ingestionTime": 1764274490839
+        }
+    ],
+    "nextForwardToken": "f/39344635821616222537192882502358977560029205561348915205/s",
+    "nextBackwardToken": "b/39344635776568717236161023756456826649279515319268474880/s"
+}
