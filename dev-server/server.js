@@ -577,6 +577,27 @@ Give 3 quick wins the user can implement this week.`;
 }
 
 // ============================================================================
+// LOGGING ENDPOINT - Receives client-side errors for debugging
+// ============================================================================
+
+// POST /logs - Log client-side errors (non-critical, just for debugging)
+app.post('/logs', (req, res) => {
+  const { level, message, context, timestamp } = req.body;
+  
+  // Only log in development or if explicitly enabled
+  if (process.env.NODE_ENV !== 'production' || process.env.ENABLE_CLIENT_LOGS) {
+    console.log(`[CLIENT ${level?.toUpperCase() || 'LOG'}] ${timestamp || new Date().toISOString()}`);
+    console.log(`   Message: ${message}`);
+    if (context) {
+      console.log(`   Context: ${JSON.stringify(context, null, 2)}`);
+    }
+  }
+  
+  // Always return success to prevent client-side error loops
+  res.json({ received: true });
+});
+
+// ============================================================================
 // DYNAMODB CRUD ROUTES - Transactions (REST-style URLs)
 // ============================================================================
 
@@ -770,29 +791,45 @@ app.get('/users/:userId/categories', async (req, res) => {
   }
 });
 
-// POST /users/:userId/categories - Create new category
+// POST /users/:userId/categories - Create/update categories (supports batch)
+// Frontend sends full array of categories; backend replaces user's categories
 app.post('/users/:userId/categories', async (req, res) => {
   try {
     const userId = req.params.userId;
-    const category = req.body;
+    const body = req.body;
     
-    const command = new PutCommand({
-      TableName: TABLES.categories,
-      Item: {
-        userId,
-        categoryId: category.id,
-        name: category.name,
-        type: category.type,
-        color: category.color,
-        icon: category.icon || ''
-      }
+    // Handle both single category and array of categories
+    const categories = Array.isArray(body) ? body : [body];
+    
+    if (categories.length === 0) {
+      return res.status(400).json({ error: 'No categories provided' });
+    }
+    
+    console.log(`📁 Saving ${categories.length} categories for user ${userId.substring(0, 8)}...`);
+    
+    // Save each category (could use BatchWrite for >25 items, but typical use is <20)
+    const savePromises = categories.map(category => {
+      const command = new PutCommand({
+        TableName: TABLES.categories,
+        Item: {
+          userId,
+          categoryId: category.id,
+          name: category.name,
+          type: category.type,
+          color: category.color,
+          icon: category.icon || ''
+        }
+      });
+      return docClient.send(command);
     });
     
-    await docClient.send(command);
-    res.json({ success: true, category });
+    await Promise.all(savePromises);
+    
+    console.log(`✅ Saved ${categories.length} categories successfully`);
+    res.json({ success: true, count: categories.length });
   } catch (error) {
-    console.error('❌ Error creating category:', error);
-    res.status(500).json({ error: 'Failed to create category' });
+    console.error('❌ Error saving categories:', error);
+    res.status(500).json({ error: 'Failed to save categories', details: error.message });
   }
 });
 
