@@ -11,6 +11,9 @@ dotenv.config();
 // Detect if running in AWS (no DYNAMODB_ENDPOINT set means use real AWS)
 const IS_AWS = !process.env.DYNAMODB_ENDPOINT || process.env.DYNAMODB_ENDPOINT.includes('amazonaws.com');
 
+// API Gateway URL for AI Lambda (used when OPENAI_API_KEY not available)
+const AI_API_GATEWAY_URL = process.env.AI_API_GATEWAY_URL || 'https://vdhz0btyi5.execute-api.eu-central-1.amazonaws.com';
+
 // DynamoDB table names (different for local vs AWS)
 const TABLES = {
   transactions: process.env.TRANSACTIONS_TABLE || (IS_AWS ? 'financeflow-transactions-poc' : 'Transactions'),
@@ -141,8 +144,30 @@ app.post('/api/ai/suggestions', async (req, res) => {
     console.log(`   Expenses: €${summary.totalExpenses.toFixed(2)}`);
     console.log(`   Balance: €${summary.savingsOrDeficit.toFixed(2)}`);
 
+    // If no OpenAI key in this environment, proxy to API Gateway Lambda
+    if (!hasOpenAI) {
+      console.log('🔄 Proxying to API Gateway Lambda (no local OPENAI_API_KEY)...');
+      const lambdaResponse = await fetch(`${AI_API_GATEWAY_URL}/ai/suggestions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ summary, language })
+      });
+      
+      if (!lambdaResponse.ok) {
+        const errorData = await lambdaResponse.json().catch(() => ({}));
+        console.error('❌ Lambda proxy error:', lambdaResponse.status, errorData);
+        return res.status(lambdaResponse.status).json(errorData);
+      }
+      
+      const data = await lambdaResponse.json();
+      console.log(`✅ Lambda returned ${data.suggestions?.length || 0} suggestions`);
+      return res.json(data);
+    }
+
     // Get system prompt for the selected language
     const systemPrompt = SYSTEM_PROMPTS[language] || SYSTEM_PROMPTS.lt;
+
+    // Build user prompt
 
     // Build user prompt
     const userPrompt = buildUserPrompt(summary, language);
@@ -328,6 +353,26 @@ app.post('/api/ai/follow-up', async (req, res) => {
 
     console.log(`🔄 Generating ${followUpType} follow-up response...`);
     console.log(`   Language: ${language}`);
+
+    // If no OpenAI key in this environment, proxy to API Gateway Lambda
+    if (!hasOpenAI) {
+      console.log('🔄 Proxying follow-up to API Gateway Lambda...');
+      const lambdaResponse = await fetch(`${AI_API_GATEWAY_URL}/ai/follow-up`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ followUpType, originalSummary, initialSuggestions, language })
+      });
+      
+      if (!lambdaResponse.ok) {
+        const errorData = await lambdaResponse.json().catch(() => ({}));
+        console.error('❌ Lambda follow-up proxy error:', lambdaResponse.status, errorData);
+        return res.status(lambdaResponse.status).json(errorData);
+      }
+      
+      const data = await lambdaResponse.json();
+      console.log(`✅ Lambda returned follow-up response`);
+      return res.json(data);
+    }
 
     // Build mode-specific prompt
     const { systemPrompt, userPrompt } = buildFollowUpPrompt(
