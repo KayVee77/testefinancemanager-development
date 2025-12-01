@@ -1,0 +1,389 @@
+# ============================================================================
+# FinanceFlow - Build, Push to ECR, Deploy to ECS, Invalidate CloudFront
+# ============================================================================
+# Trigger: Push a tag like v1.0.0 to master branch
+# 
+# Infrastructure: Terraform-managed (tf_financeflow-prod-*)
+#
+# Usage:
+#   git checkout master
+#   git tag v1.0.0
+#   git push origin v1.0.0
+# ============================================================================
+
+name: Deploy to AWS
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Matches v1.0.0, v2.1.3, etc.
+
+# Environment variables from Terraform deployment
+env:
+  AWS_REGION: eu-central-1
+  ECR_REPOSITORY: tf_financeflow-prod-app
+  ECS_CLUSTER: tf_financeflow-prod-cluster
+  ECS_SERVICE: tf_financeflow-prod-service
+  CLOUDFRONT_URL: https://d2up3rsijr9yyt.cloudfront.net
+  AI_API_URL: https://vdhz0btyi5.execute-api.eu-central-1.amazonaws.com
+  COGNITO_USER_POOL_ID: eu-central-1_RDCXJdN99
+  COGNITO_CLIENT_ID: 13fbj28hmoleoehta81553q2k8
+
+# Ensure only one deployment runs at a time
+concurrency:
+  group: production-deploy
+  cancel-in-progress: false
+
+jobs:
+  # ══════════════════════════════════════════════════════════════════════════
+  # JOB: Verify tag is on master branch
+  # ══════════════════════════════════════════════════════════════════════════
+  verify-branch:
+    name: Verify Master Branch
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for branch check
+
+      - name: Verify tag is on master
+        run: |
+          # Get the branch containing this tag
+          TAG_COMMIT=$(git rev-list -n 1 ${{ github.ref_name }})
+          
+          # Check if master contains this commit
+          if git branch -r --contains $TAG_COMMIT | grep -q 'origin/master\|origin/main'; then
+            echo "✅ Tag ${{ github.ref_name }} is on master branch"
+          else
+            echo "❌ Tag ${{ github.ref_name }} is NOT on master branch"
+            echo "   Only tags on master can be deployed"
+            exit 1
+          fi
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # JOB: Build and Push Docker Image to ECR
+  # ══════════════════════════════════════════════════════════════════════════
+  build-and-push:
+    name: Build & Push to ECR
+    runs-on: ubuntu-latest
+    needs: verify-branch
+    
+    # Required for OIDC authentication with AWS
+    permissions:
+      id-token: write   # Request OIDC token
+      contents: read    # Read repository
+
+    outputs:
+      image_uri: ${{ steps.output.outputs.image_uri }}
+      version: ${{ steps.version.outputs.version }}
+
+    steps:
+      # ────────────────────────────────────────────────────────────────────────
+      # Step 1: Checkout code
+      # ────────────────────────────────────────────────────────────────────────
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ────────────────────────────────────────────────────────────────────────
+      # Step 2: Extract version from tag
+      # ────────────────────────────────────────────────────────────────────────
+      - name: Extract version from tag
+        id: version
+        run: |
+          # Remove 'v' prefix from tag (v1.0.0 → 1.0.0)
+          VERSION=${GITHUB_REF_NAME#v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "📌 Version: $VERSION"
+
+      # ────────────────────────────────────────────────────────────────────────
+      # Step 3: Configure AWS credentials via OIDC
+      # ────────────────────────────────────────────────────────────────────────
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: github-actions-${{ github.run_id }}
+
+      # ────────────────────────────────────────────────────────────────────────
+      # Step 4: Login to Amazon ECR
+      # ────────────────────────────────────────────────────────────────────────
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # ────────────────────────────────────────────────────────────────────────
+      # Step 5: Set up Docker Buildx (for better caching)
+      # ────────────────────────────────────────────────────────────────────────
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # ────────────────────────────────────────────────────────────────────────
+      # Step 6: Build and push Docker image
+      # ────────────────────────────────────────────────────────────────────────
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./project
+          file: ./project/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ steps.version.outputs.version }}
+            ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
+          build-args: |
+            VITE_APP_URL=${{ env.CLOUDFRONT_URL }}
+            VITE_AWS_COGNITO_USER_POOL_ID=${{ env.COGNITO_USER_POOL_ID }}
+            VITE_AWS_COGNITO_CLIENT_ID=${{ env.COGNITO_CLIENT_ID }}
+            VITE_AI_API_URL=${{ env.AI_API_URL }}
+            VITE_RUNTIME=aws
+            VITE_USE_DYNAMODB=true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: false
+
+      # ────────────────────────────────────────────────────────────────────────
+      # Step 7: Output image URI
+      # ────────────────────────────────────────────────────────────────────────
+      - name: Set output
+        id: output
+        run: |
+          IMAGE_URI="${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ steps.version.outputs.version }}"
+          echo "image_uri=$IMAGE_URI" >> $GITHUB_OUTPUT
+          echo "📦 Image pushed: $IMAGE_URI"
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # JOB: Deploy to ECS
+  # ══════════════════════════════════════════════════════════════════════════
+  deploy-ecs:
+    name: Deploy to ECS
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Force ECS redeploy
+        run: |
+          echo "🚀 Forcing ECS service redeploy..."
+          aws ecs update-service \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --service ${{ env.ECS_SERVICE }} \
+            --force-new-deployment \
+            --region ${{ env.AWS_REGION }}
+          
+          echo "⏳ Waiting for service stability..."
+          aws ecs wait services-stable \
+            --cluster ${{ env.ECS_CLUSTER }} \
+            --services ${{ env.ECS_SERVICE }} \
+            --region ${{ env.AWS_REGION }}
+          
+          echo "✅ ECS deployment complete!"
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # JOB: Invalidate CloudFront Cache
+  # ══════════════════════════════════════════════════════════════════════════
+  invalidate-cloudfront:
+    name: Invalidate CloudFront
+    runs-on: ubuntu-latest
+    needs: deploy-ecs
+    
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Invalidate CloudFront cache
+        run: |
+          # Get CloudFront distribution ID from URL
+          # d2up3rsijr9yyt.cloudfront.net -> find distribution ID
+          DISTRIBUTION_ID=$(aws cloudfront list-distributions \
+            --query "DistributionList.Items[?DomainName=='d2up3rsijr9yyt.cloudfront.net'].Id" \
+            --output text)
+          
+          if [ -z "$DISTRIBUTION_ID" ]; then
+            echo "⚠️ CloudFront distribution not found, skipping invalidation"
+            exit 0
+          fi
+          
+          INVALIDATION_ID=$(aws cloudfront create-invalidation \
+            --distribution-id $DISTRIBUTION_ID \
+            --paths "/*" \
+            --query 'Invalidation.Id' \
+            --output text)
+          
+          echo "🔄 CloudFront invalidation created: $INVALIDATION_ID"
+          
+          # Wait for invalidation to complete
+          echo "⏳ Waiting for invalidation to complete..."
+          aws cloudfront wait invalidation-completed \
+            --distribution-id $DISTRIBUTION_ID \
+            --id $INVALIDATION_ID
+          
+          echo "✅ CloudFront cache invalidated!"
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # JOB: Deploy OpenAI Lambda Function
+  # ══════════════════════════════════════════════════════════════════════════
+  # Note: Lambda is managed by Terraform via API Gateway
+  # The Lambda code can be updated here, or managed entirely by Terraform
+  # API Gateway URL: https://vdhz0btyi5.execute-api.eu-central-1.amazonaws.com
+  # ══════════════════════════════════════════════════════════════════════════
+  deploy-lambda:
+    name: Deploy OpenAI Lambda
+    runs-on: ubuntu-latest
+    needs: verify-branch
+    
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          VERSION=${GITHUB_REF_NAME#v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Find Lambda function
+        id: find-lambda
+        run: |
+          # Find the Terraform-created Lambda function (pattern: tf_financeflow-prod-*)
+          LAMBDA_NAME=$(aws lambda list-functions \
+            --query "Functions[?contains(FunctionName, 'tf_financeflow-prod') && contains(FunctionName, 'openai')].FunctionName" \
+            --output text | head -1)
+          
+          if [ -z "$LAMBDA_NAME" ]; then
+            # Try alternative pattern
+            LAMBDA_NAME=$(aws lambda list-functions \
+              --query "Functions[?contains(FunctionName, 'financeflow') && contains(FunctionName, 'ai')].FunctionName" \
+              --output text | head -1)
+          fi
+          
+          if [ -z "$LAMBDA_NAME" ]; then
+            echo "⚠️ No Lambda function found matching pattern"
+            echo "   Lambda is managed by Terraform, skipping code update"
+            echo "found=false" >> $GITHUB_OUTPUT
+          else
+            echo "✅ Found Lambda: $LAMBDA_NAME"
+            echo "lambda_name=$LAMBDA_NAME" >> $GITHUB_OUTPUT
+            echo "found=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create Lambda deployment package
+        if: steps.find-lambda.outputs.found == 'true'
+        working-directory: ./project/lambda/openai-suggestions
+        run: |
+          # Lambda function is a single file, no dependencies needed (uses native https)
+          zip -j lambda-deployment.zip index.mjs
+          
+          echo "📦 Lambda zip created (single file, no dependencies)"
+          unzip -l lambda-deployment.zip
+
+      - name: Deploy Lambda function
+        if: steps.find-lambda.outputs.found == 'true'
+        working-directory: ./project/lambda/openai-suggestions
+        run: |
+          LAMBDA_NAME="${{ steps.find-lambda.outputs.lambda_name }}"
+          
+          echo "🔄 Updating Lambda function: $LAMBDA_NAME"
+          aws lambda update-function-code \
+            --function-name "$LAMBDA_NAME" \
+            --zip-file fileb://lambda-deployment.zip
+          
+          # Wait for update to complete
+          aws lambda wait function-updated \
+            --function-name "$LAMBDA_NAME"
+          
+          echo "✅ Lambda function code updated!"
+
+      - name: Publish Lambda version
+        if: steps.find-lambda.outputs.found == 'true'
+        id: lambda-version
+        run: |
+          LAMBDA_NAME="${{ steps.find-lambda.outputs.lambda_name }}"
+          
+          # Wait for any config updates to complete
+          aws lambda wait function-updated \
+            --function-name "$LAMBDA_NAME"
+          
+          VERSION_ARN=$(aws lambda publish-version \
+            --function-name "$LAMBDA_NAME" \
+            --description "v${{ steps.version.outputs.version }}" \
+            --query 'FunctionArn' \
+            --output text)
+          
+          echo "version_arn=$VERSION_ARN" >> $GITHUB_OUTPUT
+          echo "🏷️ Published Lambda version: $VERSION_ARN"
+
+  # ══════════════════════════════════════════════════════════════════════════
+  # JOB: Health Check & Summary
+  # ══════════════════════════════════════════════════════════════════════════
+  verify-deployment:
+    name: Verify Deployment
+    runs-on: ubuntu-latest
+    needs: [build-and-push, deploy-ecs, invalidate-cloudfront, deploy-lambda]
+    
+    steps:
+      - name: Health check
+        run: |
+          echo "🏥 Checking application health..."
+          sleep 30
+          
+          HEALTH_URL="${{ env.CLOUDFRONT_URL }}/health"
+          
+          for i in {1..5}; do
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" $HEALTH_URL)
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "✅ Health check passed!"
+              curl -s $HEALTH_URL | jq . || true
+              exit 0
+            fi
+            echo "⏳ Attempt $i/5: HTTP $HTTP_CODE, retrying in 10s..."
+            sleep 10
+          done
+          
+          echo "⚠️ Health check inconclusive (may still be propagating)"
+        env:
+          CLOUDFRONT_URL: https://d2up3rsijr9yyt.cloudfront.net
+
+      - name: Deployment summary
+        run: |
+          echo "## 🚀 Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Version | \`${{ needs.build-and-push.outputs.version }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Image | \`${{ needs.build-and-push.outputs.image_uri }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| ECS Cluster | \`tf_financeflow-prod-cluster\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| ECS Service | \`tf_financeflow-prod-service\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Triggered by | @${{ github.actor }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Commit | \`${{ github.sha }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| URL | https://d2up3rsijr9yyt.cloudfront.net |" >> $GITHUB_STEP_SUMMARY
+          echo "| AI API | https://vdhz0btyi5.execute-api.eu-central-1.amazonaws.com |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Deployment completed successfully!" >> $GITHUB_STEP_SUMMARY
