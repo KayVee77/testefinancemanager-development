@@ -28,6 +28,7 @@ env:
   AI_API_URL: https://vdhz0btyi5.execute-api.eu-central-1.amazonaws.com
   COGNITO_USER_POOL_ID: eu-central-1_RDCXJdN99
   COGNITO_CLIENT_ID: 13fbj28hmoleoehta81553q2k8
+  COGNITO_DOMAIN: https://tf-financeflow-prod-nq8kgb0t.auth.eu-central-1.amazoncognito.com
 
 # Ensure only one deployment runs at a time
 concurrency:
@@ -140,6 +141,7 @@ jobs:
             VITE_API_BASE_URL=/api
             VITE_AWS_COGNITO_USER_POOL_ID=${{ env.COGNITO_USER_POOL_ID }}
             VITE_AWS_COGNITO_CLIENT_ID=${{ env.COGNITO_CLIENT_ID }}
+            VITE_AWS_COGNITO_DOMAIN=${{ env.COGNITO_DOMAIN }}
             VITE_AI_API_URL=${{ env.AI_API_URL }}
             VITE_DEV_ONLY_AUTH=false
             VITE_USE_DYNAMODB=true
