@@ -133,12 +133,17 @@ jobs:
             ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ steps.version.outputs.version }}
             ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
           build-args: |
+            VITE_APP_ENV=production
+            VITE_ENVIRONMENT=production
             VITE_APP_URL=${{ env.CLOUDFRONT_URL }}
+            VITE_AWS_REGION=${{ env.AWS_REGION }}
+            VITE_API_BASE_URL=/api
             VITE_AWS_COGNITO_USER_POOL_ID=${{ env.COGNITO_USER_POOL_ID }}
             VITE_AWS_COGNITO_CLIENT_ID=${{ env.COGNITO_CLIENT_ID }}
             VITE_AI_API_URL=${{ env.AI_API_URL }}
-            VITE_RUNTIME=aws
+            VITE_DEV_ONLY_AUTH=false
             VITE_USE_DYNAMODB=true
+            VITE_RUNTIME=aws
           cache-from: type=gha
           cache-to: type=gha,mode=max
           provenance: false
