@@ -833,7 +833,10 @@ app.post('/users/:userId/categories', async (req, res) => {
   }
 });
 
-// Start server
+// ============================================================================
+// SERVER STARTUP
+// ============================================================================
+
 app.listen(PORT, () => {
   console.log('');
   console.log('='.repeat(60));
