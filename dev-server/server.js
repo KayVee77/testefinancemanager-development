@@ -15,9 +15,10 @@ const IS_AWS = !process.env.DYNAMODB_ENDPOINT || process.env.DYNAMODB_ENDPOINT.i
 const AI_API_GATEWAY_URL = process.env.AI_API_GATEWAY_URL || 'https://vdhz0btyi5.execute-api.eu-central-1.amazonaws.com';
 
 // DynamoDB table names (different for local vs AWS)
+// Production uses Terraform-created tables with tf_ prefix
 const TABLES = {
-  transactions: process.env.TRANSACTIONS_TABLE || (IS_AWS ? 'financeflow-transactions-poc' : 'Transactions'),
-  categories: process.env.CATEGORIES_TABLE || (IS_AWS ? 'financeflow-categories-poc' : 'Categories')
+  transactions: process.env.TRANSACTIONS_TABLE || (IS_AWS ? 'tf_financeflow-prod-transactions' : 'Transactions'),
+  categories: process.env.CATEGORIES_TABLE || (IS_AWS ? 'tf_financeflow-prod-categories' : 'Categories')
 };
 
 // Initialize DynamoDB Client
