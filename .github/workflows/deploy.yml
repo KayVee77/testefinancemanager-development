@@ -289,10 +289,6 @@ jobs:
             --function-name "$LAMBDA_NAME" \
             --zip-file fileb://lambda-deployment.zip
           
-          # Wait for update to complete
-          aws lambda wait function-updated \
-            --function-name "$LAMBDA_NAME"
-          
           echo "✅ Lambda code updated successfully!"
 
   # ══════════════════════════════════════════════════════════════════════════
