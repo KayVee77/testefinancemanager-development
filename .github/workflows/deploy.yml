@@ -269,33 +269,7 @@ jobs:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Find Lambda function
-        id: find-lambda
-        run: |
-          # Find the Terraform-created Lambda function (pattern: tf_financeflow-prod-*)
-          LAMBDA_NAME=$(aws lambda list-functions \
-            --query "Functions[?contains(FunctionName, 'tf_financeflow-prod') && contains(FunctionName, 'openai')].FunctionName" \
-            --output text | head -1)
-          
-          if [ -z "$LAMBDA_NAME" ]; then
-            # Try alternative pattern
-            LAMBDA_NAME=$(aws lambda list-functions \
-              --query "Functions[?contains(FunctionName, 'financeflow') && contains(FunctionName, 'ai')].FunctionName" \
-              --output text | head -1)
-          fi
-          
-          if [ -z "$LAMBDA_NAME" ]; then
-            echo "⚠️ No Lambda function found matching pattern"
-            echo "   Lambda is managed by Terraform, skipping code update"
-            echo "found=false" >> $GITHUB_OUTPUT
-          else
-            echo "✅ Found Lambda: $LAMBDA_NAME"
-            echo "lambda_name=$LAMBDA_NAME" >> $GITHUB_OUTPUT
-            echo "found=true" >> $GITHUB_OUTPUT
-          fi
-
       - name: Create Lambda deployment package
-        if: steps.find-lambda.outputs.found == 'true'
         working-directory: ./lambda/openai-suggestions
         run: |
           # Lambda function is a single file, no dependencies needed (uses native https)
@@ -305,10 +279,10 @@ jobs:
           unzip -l lambda-deployment.zip
 
       - name: Deploy Lambda function
-        if: steps.find-lambda.outputs.found == 'true'
         working-directory: ./lambda/openai-suggestions
         run: |
-          LAMBDA_NAME="${{ steps.find-lambda.outputs.lambda_name }}"
+          # Use known Terraform-created Lambda name directly
+          LAMBDA_NAME="tf_financeflow-prod-openai"
           
           echo "🔄 Updating Lambda function: $LAMBDA_NAME"
           aws lambda update-function-code \
@@ -319,26 +293,7 @@ jobs:
           aws lambda wait function-updated \
             --function-name "$LAMBDA_NAME"
           
-          echo "✅ Lambda function code updated!"
-
-      - name: Publish Lambda version
-        if: steps.find-lambda.outputs.found == 'true'
-        id: lambda-version
-        run: |
-          LAMBDA_NAME="${{ steps.find-lambda.outputs.lambda_name }}"
-          
-          # Wait for any config updates to complete
-          aws lambda wait function-updated \
-            --function-name "$LAMBDA_NAME"
-          
-          VERSION_ARN=$(aws lambda publish-version \
-            --function-name "$LAMBDA_NAME" \
-            --description "v${{ steps.version.outputs.version }}" \
-            --query 'FunctionArn' \
-            --output text)
-          
-          echo "version_arn=$VERSION_ARN" >> $GITHUB_OUTPUT
-          echo "🏷️ Published Lambda version: $VERSION_ARN"
+          echo "✅ Lambda code updated successfully!"
 
   # ══════════════════════════════════════════════════════════════════════════
   # JOB: Health Check & Summary
