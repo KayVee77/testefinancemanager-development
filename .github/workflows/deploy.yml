@@ -126,8 +126,8 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: ./project
-          file: ./project/Dockerfile
+          context: .
+          file: ./Dockerfile
           push: true
           tags: |
             ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ steps.version.outputs.version }}
@@ -296,7 +296,7 @@ jobs:
 
       - name: Create Lambda deployment package
         if: steps.find-lambda.outputs.found == 'true'
-        working-directory: ./project/lambda/openai-suggestions
+        working-directory: ./lambda/openai-suggestions
         run: |
           # Lambda function is a single file, no dependencies needed (uses native https)
           zip -j lambda-deployment.zip index.mjs
@@ -306,7 +306,7 @@ jobs:
 
       - name: Deploy Lambda function
         if: steps.find-lambda.outputs.found == 'true'
-        working-directory: ./project/lambda/openai-suggestions
+        working-directory: ./lambda/openai-suggestions
         run: |
           LAMBDA_NAME="${{ steps.find-lambda.outputs.lambda_name }}"
           
