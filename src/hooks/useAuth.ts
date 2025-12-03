@@ -37,8 +37,8 @@ export const useAuth = () => {
   const store = useAuthStore();
   
   // AWS mode: Use OIDC auth (only if configured)
-  // We call the hook conditionally based on environment
-  const oidcAuth = useOidc ? useOidcAuthSafe() : null;
+  // The hook is called unconditionally to satisfy the rules-of-hooks
+  const oidcAuth = useOidcAuthSafe();
   console.info('[useAuth] oidcAuth:', oidcAuth ? 'available' : 'null');
   
   // Sync OIDC user to store when in AWS mode
@@ -50,7 +50,7 @@ export const useAuth = () => {
       // User logged out from OIDC
       store.logout();
     }
-  }, [oidcAuth?.isAuthenticated, oidcAuth?.user, oidcAuth?.isLoading]);
+  }, [oidcAuth?.isAuthenticated, oidcAuth?.user, oidcAuth?.isLoading, store]);
   
   // AWS MODE: Return OIDC-based auth
   if (useOidc && oidcAuth) {
@@ -67,13 +67,8 @@ export const useAuth = () => {
         // Redirect to Cognito login page
         console.info('[useAuth] login() called, calling signinRedirect...');
         console.info('[useAuth] oidcAuth.signinRedirect:', typeof oidcAuth.signinRedirect);
-        try {
-          await oidcAuth.signinRedirect();
-          console.info('[useAuth] signinRedirect completed');
-        } catch (error) {
-          console.error('[useAuth] signinRedirect error:', error);
-          throw error;
-        }
+        await oidcAuth.signinRedirect();
+        console.info('[useAuth] signinRedirect completed');
       },
       register: async () => {
         // Cognito Hosted UI handles registration
@@ -103,22 +98,14 @@ export const useAuth = () => {
     
     // Actions
     login: async (credentials: LoginCredentials) => {
-      try {
-        const user = await authService.login(credentials);
-        store.setUser(user);
-        return user;
-      } catch (error) {
-        throw error;
-      }
+      const user = await authService.login(credentials);
+      store.setUser(user);
+      return user;
     },
     register: async (data: RegisterData) => {
-      try {
-        const user = await authService.register(data);
-        store.setUser(user);
-        return user;
-      } catch (error) {
-        throw error;
-      }
+      const user = await authService.register(data);
+      store.setUser(user);
+      return user;
     },
     logout: async () => {
       try {
