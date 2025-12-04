@@ -1,0 +1,10 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {"Sid": "ECRAuth", "Effect": "Allow", "Action": "ecr:GetAuthorizationToken", "Resource": "*"},
+        {"Sid": "ECRPush", "Effect": "Allow", "Action": ["ecr:BatchCheckLayerAvailability","ecr:GetDownloadUrlForLayer","ecr:BatchGetImage","ecr:PutImage","ecr:InitiateLayerUpload","ecr:UploadLayerPart","ecr:CompleteLayerUpload","ecr:DescribeImages"], "Resource": "arn:aws:ecr:eu-central-1:703524245589:repository/tf_financeflow-prod-app"},
+        {"Sid": "ECS", "Effect": "Allow", "Action": ["ecs:DescribeServices","ecs:DescribeTaskDefinition","ecs:DescribeTasks","ecs:ListTasks","ecs:UpdateService"], "Resource": "*"},
+        {"Sid": "CloudFront", "Effect": "Allow", "Action": ["cloudfront:CreateInvalidation","cloudfront:GetInvalidation","cloudfront:ListDistributions"], "Resource": "*"},
+        {"Sid": "LambdaUpdate", "Effect": "Allow", "Action": ["lambda:GetFunction","lambda:GetFunctionConfiguration","lambda:UpdateFunctionCode"], "Resource": "arn:aws:lambda:eu-central-1:703524245589:function:tf_financeflow-prod-openai"}
+    ]
+}

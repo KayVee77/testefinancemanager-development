@@ -1,0 +1,1 @@
+{"body":"{\"summary\":{\"totalIncome\":2500,\"totalExpenses\":315,\"savingsOrDeficit\":2185,\"expenseCategories\":[{\"name\":\"Food\",\"amount\":230,\"shareOfExpenses\":0.73}]},\"language\":\"en\"}","httpMethod":"POST","path":"/ai/suggestions"}

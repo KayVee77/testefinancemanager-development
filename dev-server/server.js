@@ -838,7 +838,7 @@ app.get('/users/:userId/categories', async (req, res) => {
 });
 
 // POST /users/:userId/categories - Create/update categories (supports batch)
-// Frontend sends full array of categories; backend replaces user's categories
+// Frontend sends full array of categories; backend REPLACES all user's categories
 app.post('/users/:userId/categories', async (req, res) => {
   try {
     const userId = req.params.userId;
@@ -851,9 +851,41 @@ app.post('/users/:userId/categories', async (req, res) => {
       return res.status(400).json({ error: 'No categories provided' });
     }
     
-    console.log(`📁 Saving ${categories.length} categories for user ${userId.substring(0, 8)}...`);
+    console.log(`📁 Replacing categories for user ${userId.substring(0, 8)}...`);
     
-    // Save each category (could use BatchWrite for >25 items, but typical use is <20)
+    // Step 1: Get all existing categories for this user
+    const queryCommand = new QueryCommand({
+      TableName: TABLES.categories,
+      KeyConditionExpression: 'userId = :userId',
+      ExpressionAttributeValues: {
+        ':userId': userId
+      }
+    });
+    const existingData = await docClient.send(queryCommand);
+    const existingCategories = existingData.Items || [];
+    
+    // Step 2: Find categories to delete (exist in DB but not in new array)
+    const newCategoryIds = new Set(categories.map(c => c.id));
+    const categoriesToDelete = existingCategories.filter(c => !newCategoryIds.has(c.categoryId));
+    
+    // Step 3: Delete removed categories
+    if (categoriesToDelete.length > 0) {
+      console.log(`🗑️ Deleting ${categoriesToDelete.length} removed categories...`);
+      const deletePromises = categoriesToDelete.map(category => {
+        const command = new DeleteCommand({
+          TableName: TABLES.categories,
+          Key: {
+            userId,
+            categoryId: category.categoryId
+          }
+        });
+        return docClient.send(command);
+      });
+      await Promise.all(deletePromises);
+    }
+    
+    // Step 4: Save/update all categories from frontend
+    console.log(`💾 Saving ${categories.length} categories...`);
     const savePromises = categories.map(category => {
       const command = new PutCommand({
         TableName: TABLES.categories,
@@ -871,8 +903,8 @@ app.post('/users/:userId/categories', async (req, res) => {
     
     await Promise.all(savePromises);
     
-    console.log(`✅ Saved ${categories.length} categories successfully`);
-    res.json({ success: true, count: categories.length });
+    console.log(`✅ Categories synced: ${categories.length} saved, ${categoriesToDelete.length} deleted`);
+    res.json({ success: true, count: categories.length, deleted: categoriesToDelete.length });
   } catch (error) {
     console.error('❌ Error saving categories:', error);
     res.status(500).json({ error: 'Failed to save categories', details: error.message });
