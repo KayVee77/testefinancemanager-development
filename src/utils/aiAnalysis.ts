@@ -96,33 +96,21 @@ export function aggregateBudgetForAi(
  * Check if there's enough data for meaningful AI analysis
  * 
  * Rules:
- * - At least 10 transactions total
- * - At least 7 days of transaction history
- * - Both income and expenses must exist
+ * - At least 3 transactions total (lowered from 10 for better UX)
+ * - Must have at least one expense (income optional)
+ * 
+ * Note: Date span requirement removed to allow quick onboarding
  */
 export function hasEnoughDataForAi(transactions: Transaction[]): boolean {
-  // Need at least 10 transactions
-  if (transactions.length < 10) {
+  // Need at least 3 transactions (lowered from 10)
+  if (transactions.length < 3) {
     return false;
   }
 
-  // Check date span (at least 7 days)
-  const dates = transactions.map(t => t.date.getTime());
-  if (dates.length === 0) return false;
-  
-  const minDate = Math.min(...dates);
-  const maxDate = Math.max(...dates);
-  const daySpan = (maxDate - minDate) / (1000 * 60 * 60 * 24);
-  
-  if (daySpan < 7) {
-    return false;
-  }
-
-  // Must have both income and expenses
-  const hasIncome = transactions.some(t => t.type === 'income');
+  // Must have at least one expense to analyze spending
   const hasExpenses = transactions.some(t => t.type === 'expense');
   
-  return hasIncome && hasExpenses;
+  return hasExpenses;
 }
 
 /**

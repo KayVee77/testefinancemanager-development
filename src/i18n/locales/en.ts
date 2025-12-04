@@ -190,7 +190,7 @@ export const en = {
     generating: 'Generating...',
     analyzedPeriod: 'Analyzed period',
     notEnoughDataTitle: 'Not enough data',
-    notEnoughDataMessage: 'At least 10 transactions over the past 7 days are required to generate suggestions. Add more transactions and try again.',
+    notEnoughDataMessage: 'At least 3 transactions are required to generate suggestions. Add more transactions and try again.',
     suggestionsTitle: 'AI Suggestions',
     exportPdf: 'Export TXT',
     followUpTitle: 'Want to learn more? Select a question:',

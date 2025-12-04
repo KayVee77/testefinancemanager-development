@@ -190,7 +190,7 @@ export const lt = {
     generating: 'Generuojama...',
     analyzedPeriod: 'Analizuojamas laikotarpis',
     notEnoughDataTitle: 'Nepakanka duomenų',
-    notEnoughDataMessage: 'Pasiūlymams sugeneruoti reikia bent 10 transakcijų per pastarąsias 7 dienas. Įveskite daugiau transakcijų ir pabandykite dar kartą.',
+    notEnoughDataMessage: 'Pasiūlymams sugeneruoti reikia bent 3 transakcijas. Įveskite daugiau transakcijų ir pabandykite dar kartą.',
     suggestionsTitle: 'DI pasiūlymai',
     exportPdf: 'Eksportuoti TXT',
     followUpTitle: 'Norite sužinoti daugiau? Pasirinkite klausimą:',
