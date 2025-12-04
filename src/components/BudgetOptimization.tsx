@@ -5,10 +5,14 @@ import { useTranslation } from '../hooks/useTranslation';
 import { aggregateBudgetForAi, generateAISuggestions, generateFollowUpResponse, BudgetAiSummary, FOLLOW_UP_PROMPTS } from '../utils/aiAnalysis';
 import { exportAiAnalysisToPdf } from '../utils/pdfExport';
 import { startOfMonth, endOfMonth, format } from 'date-fns';
+import { enUS, lt as ltLocale } from 'date-fns/locale';
 
 export function BudgetOptimization() {
   const { transactions } = useTransactions();
   const { t, language } = useTranslation();
+  
+  // Select locale for date formatting based on UI language
+  const dateLocale = language === 'lt' ? ltLocale : enUS;
   
   const [loading, setLoading] = useState(false);
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -116,7 +120,7 @@ export function BudgetOptimization() {
       {summary && (
         <div className="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-800 dark:to-gray-800 rounded-xl border border-blue-100 dark:border-gray-700 p-6">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-            {t('budgetOptimization.analyzedPeriod')}: {format(new Date(summary.period.from), 'MMM dd')} - {format(new Date(summary.period.to), 'MMM dd, yyyy')}
+            {t('budgetOptimization.analyzedPeriod')}: {format(new Date(summary.period.from), 'yyyy MMMM d', { locale: dateLocale })} – {format(new Date(summary.period.to), 'yyyy MMMM d', { locale: dateLocale })}
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="bg-white dark:bg-gray-700 rounded-lg p-4">

@@ -106,6 +106,13 @@ export const en = {
     addCategory: 'Add Category',
     categoryName: 'Category name',
     categoryColor: 'Color',
+    deleteCategory: 'Delete category',
+    deleteCategoryConfirm: 'Are you sure you want to delete this category?',
+    categoryInUse: 'This category is used in transactions and cannot be deleted',
+    categoryDeleted: 'Category deleted',
+    deleteTransactionConfirm: 'Are you sure you want to delete this transaction?',
+    transactionDeleted: 'Transaction deleted',
+    manageCategories: 'Manage categories',
   },
 
   // Charts

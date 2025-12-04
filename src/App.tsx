@@ -164,6 +164,29 @@ function App() {
     }
   };
 
+  // Handle deleting a category
+  const deleteCategory = async (categoryId: string) => {
+    if (!user) return;
+
+    // Default categories (IDs 1-9) cannot be deleted
+    const numericId = parseInt(categoryId, 10);
+    if (!isNaN(numericId) && numericId <= 9) {
+      notificationService.error(t('common.error'));
+      return;
+    }
+
+    try {
+      const updatedCategories = categories.filter(cat => cat.id !== categoryId);
+      setCategories(updatedCategories);
+      await saveCategories(user.id, updatedCategories);
+      notificationService.success(t('transactions.categoryDeleted'));
+    } catch (error) {
+      notificationService.error(t('common.error'));
+      // Revert on error
+      setCategories(categories);
+    }
+  };
+
   const renderContent = () => {
     switch (activeTab) {
       case 'dashboard':
@@ -323,6 +346,7 @@ function App() {
           isOpen={isFormOpen}
           onClose={handleCloseForm}
           onAddCategory={addCategory}
+          onDeleteCategory={deleteCategory}
         />
       </div>
       </div>

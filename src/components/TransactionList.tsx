@@ -41,6 +41,11 @@ export const TransactionList: React.FC<TransactionListProps> = ({ categories, on
   };
 
   const handleDelete = async (id: string) => {
+    // Show confirmation dialog
+    if (!window.confirm(t('transactions.deleteTransactionConfirm'))) {
+      return;
+    }
+    
     try {
       await deleteTransaction(id);
     } catch (error) {

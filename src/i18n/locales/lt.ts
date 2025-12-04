@@ -106,6 +106,13 @@ export const lt = {
     addCategory: 'Pridėti kategoriją',
     categoryName: 'Kategorijos pavadinimas',
     categoryColor: 'Spalva',
+    deleteCategory: 'Ištrinti kategoriją',
+    deleteCategoryConfirm: 'Ar tikrai norite ištrinti šią kategoriją?',
+    categoryInUse: 'Ši kategorija naudojama transakcijose ir negali būti ištrinta',
+    categoryDeleted: 'Kategorija ištrinta',
+    deleteTransactionConfirm: 'Ar tikrai norite ištrinti šią transakciją?',
+    transactionDeleted: 'Transakcija ištrinta',
+    manageCategories: 'Tvarkyti kategorijas',
   },
 
   // Charts

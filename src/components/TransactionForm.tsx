@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Transaction, Category } from '../types/Transaction';
-import { Plus, X } from 'lucide-react';
+import { Plus, X, Trash2, Settings } from 'lucide-react';
 import { sanitizeAndTrim } from '../utils/sanitize';
 import { useTranslation } from '../hooks/useTranslation';
 import { translateCategoryName } from '../i18n';
@@ -13,6 +13,7 @@ interface TransactionFormProps {
   isOpen: boolean;
   onClose: () => void;
   onAddCategory: (category: Omit<Category, 'id'>) => void;
+  onDeleteCategory?: (categoryId: string) => void;
 }
 
 export const TransactionForm: React.FC<TransactionFormProps> = ({
@@ -22,7 +23,8 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
   initialData,
   isOpen,
   onClose,
-  onAddCategory
+  onAddCategory,
+  onDeleteCategory
 }) => {
   const { t, language } = useTranslation();
   
@@ -32,12 +34,19 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
   const [type, setType] = useState<'income' | 'expense'>('expense');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [showNewCategory, setShowNewCategory] = useState(false);
+  const [showManageCategories, setShowManageCategories] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryColor, setNewCategoryColor] = useState('#3B82F6');
   const [amountError, setAmountError] = useState('');
   const [descriptionError, setDescriptionError] = useState('');
   const [categoryError, setCategoryError] = useState('');
   const [dateError, setDateError] = useState('');
+
+  // Check if a category is a default (non-deletable) category
+  const isDefaultCategory = (categoryId: string): boolean => {
+    const numericId = parseInt(categoryId, 10);
+    return !isNaN(numericId) && numericId <= 9;
+  };
 
   // Populate form when initialData changes (edit mode)
   React.useEffect(() => {
@@ -272,14 +281,26 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 {t('transactions.transactionCategory')}
               </label>
-              <button
-                type="button"
-                onClick={() => setShowNewCategory(!showNewCategory)}
-                className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 flex items-center"
-              >
-                <Plus className="h-4 w-4 mr-1" />
-                {t('transactions.newCategory')}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowNewCategory(!showNewCategory)}
+                  className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 flex items-center"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  {t('transactions.newCategory')}
+                </button>
+                {onDeleteCategory && (
+                  <button
+                    type="button"
+                    onClick={() => setShowManageCategories(!showManageCategories)}
+                    className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 flex items-center"
+                  >
+                    <Settings className="h-4 w-4 mr-1" />
+                    {t('transactions.manageCategories')}
+                  </button>
+                )}
+              </div>
             </div>
             
             {showNewCategory && (
@@ -306,6 +327,44 @@ export const TransactionForm: React.FC<TransactionFormProps> = ({
                 >
                   {t('transactions.addCategory')}
                 </button>
+              </div>
+            )}
+            
+            {/* Manage Categories Section - Delete user-created categories */}
+            {showManageCategories && onDeleteCategory && (
+              <div className="mb-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg max-h-48 overflow-y-auto">
+                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                  {t('transactions.deleteCategory')}
+                </p>
+                <div className="space-y-1">
+                  {filteredCategories.map((cat) => (
+                    <div key={cat.id} className="flex items-center justify-between py-1 px-2 bg-white dark:bg-gray-800 rounded">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: cat.color }}
+                        />
+                        <span className="text-sm text-gray-700 dark:text-gray-300">
+                          {translateCategoryName(cat.name, language)}
+                        </span>
+                      </div>
+                      {!isDefaultCategory(cat.id) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (window.confirm(t('transactions.deleteCategoryConfirm'))) {
+                              onDeleteCategory(cat.id);
+                            }
+                          }}
+                          className="p-1 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
+                          title={t('transactions.deleteCategory')}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
             
