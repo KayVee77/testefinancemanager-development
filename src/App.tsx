@@ -40,14 +40,6 @@ import { Plus, List, BarChart3, Wallet, LogOut, User as UserIcon, Sun, Moon, Lan
  * - Works with both LOCAL and AWS auth modes
  */
 function App() {
-  // Check if this is the OAuth callback route
-  const isCallbackRoute = window.location.pathname === '/callback';
-  
-  // If on callback route in AWS mode, render callback handler
-  if (isCallbackRoute && IS_AWS_MODE) {
-    return <AuthCallback />;
-  }
-
   // Theme from context
   const { theme, toggleTheme } = useTheme();
   
@@ -66,6 +58,9 @@ function App() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'reports' | 'budget-optimization'>('dashboard');
+
+  // Check if this is the OAuth callback route
+  const isCallbackRoute = window.location.pathname === '/callback';
 
   // Initialize auth on mount (checks localStorage or Cognito)
   useEffect(() => {
@@ -87,16 +82,16 @@ function App() {
         }
       }
     };
-    
+
     loadCategories();
-  }, [user?.id]);
+  }, [user, user?.id]);
 
   // Handle login
   const handleLogin = async (credentials: { email: string; password: string }): Promise<boolean> => {
     try {
       await login(credentials);
       return true;
-    } catch (error) {
+    } catch {
       // Error notification already shown by authService
       return false;
     }
@@ -107,7 +102,7 @@ function App() {
     try {
       await register(data);
       return true;
-    } catch (error) {
+    } catch {
       // Error notification already shown by authService
       return false;
     }
@@ -132,7 +127,7 @@ function App() {
       await updateTransaction(id, updates);
       setIsFormOpen(false);
       setEditingTransaction(null);
-    } catch (error) {
+    } catch {
       // Error handled by hook
     }
   };
@@ -201,6 +196,11 @@ function App() {
         return <Dashboard />;
     }
   };
+
+  // If on callback route in AWS mode, render callback handler after hooks are initialized
+  if (isCallbackRoute && IS_AWS_MODE) {
+    return <AuthCallback />;
+  }
 
   // Loading screen
   if (isLoading) {
