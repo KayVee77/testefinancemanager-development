@@ -137,11 +137,12 @@ export const handler = async (event) => {
     if (path.includes('/suggestions')) {
       const { summary, language = 'lt' } = body;
       
-      if (!summary || !summary.totalIncome) {
+      // Check if summary exists and has required fields (totalIncome can be 0)
+      if (!summary || typeof summary.totalExpenses !== 'number' || summary.totalExpenses === 0) {
         return {
           statusCode: 422,
           headers,
-          body: JSON.stringify({ code: 'NOT_ENOUGH_DATA', message: 'Nepakanka duomenų analizei.' })
+          body: JSON.stringify({ code: 'NOT_ENOUGH_DATA', message: 'Nepakanka duomenų analizei. Įveskite daugiau transakcijų.' })
         };
       }
 
